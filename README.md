@@ -34,7 +34,8 @@ JDK 17 or later and the Android SDK (API 37). Point `local.properties` at the SD
 
 A signed release build reads its key from the environment: `TEETOTUM_APP_KEYSTORE` (a PKCS12
 file), `TEETOTUM_APP_KEYSTORE_PASSWORD` and `TEETOTUM_APP_KEY_ALIAS`. Pushing a tag `vX.Y.Z` that
-matches `versionName` builds and signs the APK in CI and attaches it to a GitHub release.
+matches `versionName` builds and signs the APK in CI and attaches it to a GitHub release; the key
+lives in the `release` environment, which only tags `v*` can use.
 
 Android 10 (API 29) or later.
 

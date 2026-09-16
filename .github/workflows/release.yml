@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
+        # Run it with --ref set to the same tag: the signing key is only handed to tag refs.
         description: Existing tag to build and attach the APK to
         required: true
 
@@ -19,6 +20,8 @@ jobs:
   apk:
     name: Signed APK
     runs-on: ubuntu-latest
+    # The environment holds the signing key and only admits tags matching v*.
+    environment: release
     steps:
       - uses: actions/checkout@v5
         with:
