@@ -24,6 +24,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -93,7 +94,8 @@ private fun Camera(onCode: (JoinCode) -> Unit) {
             executor.shutdown()
         }
     }
-    AndroidView(factory = { preview }, modifier = Modifier.fillMaxSize())
+    // FILL_CENTER overflows the square; unclipped, it covers the text above.
+    AndroidView(factory = { preview }, modifier = Modifier.fillMaxSize().clipToBounds())
 }
 
 private val HINTS = mapOf(

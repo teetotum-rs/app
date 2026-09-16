@@ -4,6 +4,12 @@ All notable changes to the app are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- The camera preview no longer covers the hint above it.
+
 ## [0.1.0] - 2026-09-16
 
 First release, Android only.
