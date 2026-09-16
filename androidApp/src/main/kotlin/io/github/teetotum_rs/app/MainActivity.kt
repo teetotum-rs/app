@@ -6,9 +6,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 
 class MainActivity : ComponentActivity() {
+    private lateinit var radio: AndroidRadio
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { App() }
+        radio = AndroidRadio(applicationContext)
+        setContent { App(radio) { onCode -> Scanner(onCode) } }
+    }
+
+    override fun onDestroy() {
+        if (isFinishing) radio.leave()
+        super.onDestroy()
     }
 }

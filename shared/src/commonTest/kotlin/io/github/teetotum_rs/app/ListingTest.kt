@@ -39,3 +39,14 @@ class ListingTest {
         assertTrue(FirmwareVersion.parse("v0.10.0 abc")!! > OLDEST_FIRMWARE)
     }
 }
+
+class SizeTextTest {
+    @Test
+    fun picksTheUnit() {
+        assertEquals("0 B", sizeText(0))
+        assertEquals("1023 B", sizeText(1023))
+        assertEquals("1.0 KiB", sizeText(1024))
+        assertEquals("4.5 MiB", sizeText(4_718_592))
+        assertEquals("29.7 GiB", sizeText(31_902_400_512))
+    }
+}
