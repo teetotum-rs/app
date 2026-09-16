@@ -3,6 +3,7 @@ package io.github.teetotum_rs.app
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 
@@ -14,7 +15,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         radio = AndroidRadio(applicationContext)
         val downloads = AndroidDownloads(applicationContext)
-        setContent { App(radio, downloads, debugCode()) { onCode -> Scanner(onCode) } }
+        setContent {
+            App(
+                radio,
+                downloads,
+                debugCode(),
+                picker = { onPicked -> rememberPicker(onPicked) },
+                back = { enabled, onBack -> BackHandler(enabled, onBack) },
+            ) { onCode -> Scanner(onCode) }
+        }
     }
 
     /** In debug builds, `adb shell am start ... --es join 'WIFI:...'` stands in for the camera. */

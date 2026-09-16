@@ -1,6 +1,6 @@
 package io.github.teetotum_rs.app
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,14 +12,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
@@ -42,7 +47,14 @@ private sealed interface Stage {
     data class Failed(val message: String) : Stage
 }
 
-/** A download, running or ended. */
+/** Something the user is asked before it happens. */
+private sealed interface Question {
+    data class Remove(val entry: Entry) : Question
+    data class Replace(val picks: List<Pick>, val taken: List<String>) : Question
+    data object NewFolder : Question
+}
+
+/** A download or upload, running or ended. */
 private data class Transfer(
     val name: String,
     val done: Long = 0,
@@ -52,13 +64,17 @@ private data class Transfer(
 
 /**
  * The whole app. [scanner] shows the camera and calls back with the first Knob code it reads;
- * [radio] joins that network; [downloads] keeps what is downloaded. A [code] given skips the scan.
+ * [radio] joins that network; [downloads] keeps what is downloaded. [picker] returns a function
+ * that lets the user pick files to send; [back] takes the system's back gesture while enabled.
+ * A [code] given skips the scan.
  */
 @Composable
 fun App(
     radio: Radio,
     downloads: Downloads,
     code: JoinCode? = null,
+    picker: @Composable (onPicked: (List<Pick>) -> Unit) -> () -> Unit,
+    back: @Composable (enabled: Boolean, onBack: () -> Unit) -> Unit,
     scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
 ) {
     val client = remember { CardClient(httpClient()) }
@@ -66,6 +82,8 @@ fun App(
     var stage by remember { mutableStateOf<Stage>(code?.let { Stage.Joining(it) } ?: Stage.Scan) }
     var loading by remember { mutableStateOf(false) }
     var transfer by remember { mutableStateOf<Transfer?>(null) }
+    var question by remember { mutableStateOf<Question?>(null) }
+    val busy = loading || transfer?.let { it.result == null } == true
 
     fun fail(e: Exception) {
         if (e is CancellationException) throw e
@@ -104,6 +122,56 @@ fun App(
         }
     }
 
+    fun upload(path: String, picks: List<Pick>) {
+        scope.launch {
+            try {
+                for (pick in picks) {
+                    transfer = Transfer(pick.name, total = pick.size)
+                    client.upload(path, pick) { done, total -> transfer = Transfer(pick.name, done, total) }
+                }
+                transfer = Transfer(
+                    picks.singleOrNull()?.name ?: "${picks.size} files",
+                    result = "Sent",
+                )
+            } catch (e: CardException) {
+                transfer = Transfer(transfer?.name ?: "", result = e.message)
+            } catch (e: Exception) {
+                fail(e)
+                return@launch
+            }
+            open(path)
+        }
+    }
+
+    /** Runs a change to the card, then lists [path] again to show it. */
+    fun change(path: String, name: String, done: String, action: suspend () -> Unit) {
+        loading = true
+        scope.launch {
+            try {
+                action()
+                transfer = Transfer(name, result = done)
+            } catch (e: CardException) {
+                transfer = Transfer(name, result = e.message)
+            } catch (e: Exception) {
+                loading = false
+                fail(e)
+                return@launch
+            }
+            open(path)
+        }
+    }
+
+    val folder = stage as? Stage.Folder
+    val pick = picker { picks ->
+        val listing = (stage as? Stage.Folder)?.listing ?: return@picker
+        if (picks.isEmpty()) return@picker
+        val taken = picks.map { it.name }.filter { name -> listing.entries.any { it.name == name } }
+        if (taken.isEmpty()) upload(listing.path, picks) else question = Question.Replace(picks, taken)
+    }
+    back(folder != null && folder.listing.path != "/" && !busy) {
+        folder?.let { open(parentOf(it.listing.path)) }
+    }
+
     MaterialTheme(colorScheme = darkColorScheme()) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
@@ -120,20 +188,37 @@ fun App(
                         }
                         Waiting("Joining ${current.code.ssid}")
                     }
-                    is Stage.Folder -> FolderScreen(
-                        listing = current.listing,
-                        loading = loading,
-                        transfer = transfer,
-                        onOpen = { entry ->
-                            val path = current.listing.path + entry.name
-                            if (entry.directory) {
-                                open("$path/")
-                            } else if (transfer?.result != null || transfer == null) {
-                                download(path, entry.name)
+                    is Stage.Folder -> {
+                        val here = current.listing.path
+                        FolderScreen(
+                            listing = current.listing,
+                            loading = loading,
+                            busy = busy,
+                            transfer = transfer,
+                            onOpen = { entry ->
+                                val path = here + entry.name
+                                if (entry.directory) open("$path/") else download(path, entry.name)
+                            },
+                            onHold = { question = Question.Remove(it) },
+                            onUp = { open(parentOf(here)) },
+                            onNewFolder = { question = Question.NewFolder },
+                            onUpload = pick,
+                        )
+                        question?.let { asked ->
+                            Ask(asked, onDismiss = { question = null }) { name ->
+                                question = null
+                                when (asked) {
+                                    is Question.Remove -> change(here, asked.entry.name, "Deleted") {
+                                        client.delete(here + asked.entry.name)
+                                    }
+                                    is Question.Replace -> upload(here, asked.picks)
+                                    Question.NewFolder -> change(here, name, "Made") {
+                                        client.makeFolder(here + name)
+                                    }
+                                }
                             }
-                        },
-                        onUp = { open(parentOf(current.listing.path)) },
-                    )
+                        }
+                    }
                     is Stage.Failed -> Failed(current.message) { stage = Stage.Scan }
                 }
             }
@@ -190,9 +275,13 @@ private fun Failed(message: String, onRetry: () -> Unit) {
 private fun FolderScreen(
     listing: Listing,
     loading: Boolean,
+    busy: Boolean,
     transfer: Transfer?,
     onOpen: (Entry) -> Unit,
+    onHold: (Entry) -> Unit,
     onUp: () -> Unit,
+    onNewFolder: () -> Unit,
+    onUpload: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -208,14 +297,22 @@ private fun FolderScreen(
                 modifier = Modifier.weight(1f),
             )
             if (loading) CircularProgressIndicator()
-            OutlinedButton(onClick = onUp, enabled = listing.path != "/" && !loading) { Text("Up") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onUp, enabled = listing.path != "/" && !busy) { Text("Up") }
+            OutlinedButton(onClick = onNewFolder, enabled = !busy) { Text("New folder") }
+            Button(onClick = onUpload, enabled = !busy) { Text("Upload files") }
         }
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(listing.entries, key = { it.name }) { entry ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(enabled = !loading) { onOpen(entry) }
+                        .combinedClickable(
+                            enabled = !busy,
+                            onLongClick = { onHold(entry) },
+                            onClick = { onOpen(entry) },
+                        )
                         .padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -230,10 +327,49 @@ private fun FolderScreen(
         }
         if (transfer != null) TransferLine(transfer)
         Text(
-            "TeeToTum ${listing.version} · ${listing.entries.size} entries",
+            "TeeToTum ${listing.version} · ${listing.entries.size} entries · hold an entry to delete it",
             style = MaterialTheme.typography.bodySmall,
         )
     }
+}
+
+/** Asks [question]; [onYes] gets the folder name the user typed, or "" where none is asked. */
+@Composable
+private fun Ask(question: Question, onDismiss: () -> Unit, onYes: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    val (title, text, yes) = when (question) {
+        is Question.Remove -> Triple(
+            "Delete ${question.entry.name}?",
+            if (question.entry.directory) "Only an empty folder can be deleted." else "The file is removed from the card.",
+            "Delete",
+        )
+        is Question.Replace -> Triple(
+            "Replace ${question.taken.size} file${if (question.taken.size == 1) "" else "s"}?",
+            question.taken.joinToString("\n"),
+            "Replace",
+        )
+        Question.NewFolder -> Triple("New folder", null, "Make")
+    }
+    val ready = question != Question.NewFolder || name.isNotBlank()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            if (question == Question.NewFolder) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.replace("/", "") },
+                    singleLine = true,
+                    label = { Text("Name") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                )
+            } else if (text != null) {
+                Text(text)
+            }
+        },
+        confirmButton = { TextButton(onClick = { onYes(name.trim()) }, enabled = ready) { Text(yes) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable
