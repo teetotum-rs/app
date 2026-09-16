@@ -15,6 +15,34 @@ android {
         versionName = "0.1.0"
     }
 
+    // Release signing comes from the environment; without it the release APK stays unsigned.
+    val keystore = System.getenv("TEETOTUM_APP_KEYSTORE")
+    signingConfigs {
+        if (keystore != null) {
+            create("release") {
+                storeFile = file(keystore)
+                storeType = "PKCS12"
+                storePassword = System.getenv("TEETOTUM_APP_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("TEETOTUM_APP_KEY_ALIAS")
+                keyPassword = System.getenv("TEETOTUM_APP_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
+        }
+    }
+
+    dependenciesInfo {
+        // The signing block Google Play reads; F-Droid rejects APKs that carry it.
+        includeInApk = false
+        includeInBundle = false
+    }
 }
 
 kotlin {

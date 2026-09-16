@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  android:
+    name: Tests and APKs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v5
+      # The release APK is built unsigned here: it proves R8 still gets through the code.
+      - name: Test and build
+        run: ./gradlew --console=plain :shared:testAndroidHostTest :androidApp:assembleDebug :androidApp:assembleRelease

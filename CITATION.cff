@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use or refer to this software, please cite it as below."
+type: software
+title: "TeeToTum app"
+abstract: >-
+  Android app for the TeeToTum Knob: scans the Knob's QR code, joins its Wi-Fi and reads and
+  writes the card inside.
+authors:
+  - given-names: Stefan
+    family-names: Grühn
+version: 0.1.0
+license:
+  - MIT
+  - Apache-2.0
+repository-code: "https://github.com/teetotum-rs/app"
+url: "https://github.com/teetotum-rs/app"
+keywords:
+  - android
+  - kotlin
+  - compose-multiplatform
+  - esp32-s3
+  - wifi
