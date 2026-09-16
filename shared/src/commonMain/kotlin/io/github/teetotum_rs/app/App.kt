@@ -1,5 +1,6 @@
 package io.github.teetotum_rs.app
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -23,10 +26,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 private sealed interface Stage {
     data object Scan : Stage
@@ -35,14 +42,67 @@ private sealed interface Stage {
     data class Failed(val message: String) : Stage
 }
 
+/** A download, running or ended. */
+private data class Transfer(
+    val name: String,
+    val done: Long = 0,
+    val total: Long? = null,
+    val result: String? = null,
+)
+
 /**
  * The whole app. [scanner] shows the camera and calls back with the first Knob code it reads;
- * [radio] joins that network.
+ * [radio] joins that network; [downloads] keeps what is downloaded. A [code] given skips the scan.
  */
 @Composable
-fun App(radio: Radio, scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit) {
+fun App(
+    radio: Radio,
+    downloads: Downloads,
+    code: JoinCode? = null,
+    scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
+) {
     val client = remember { CardClient(httpClient()) }
-    var stage by remember { mutableStateOf<Stage>(Stage.Scan) }
+    val scope = rememberCoroutineScope()
+    var stage by remember { mutableStateOf<Stage>(code?.let { Stage.Joining(it) } ?: Stage.Scan) }
+    var loading by remember { mutableStateOf(false) }
+    var transfer by remember { mutableStateOf<Transfer?>(null) }
+
+    fun fail(e: Exception) {
+        if (e is CancellationException) throw e
+        radio.leave()
+        transfer = null
+        stage = Stage.Failed(e.message ?: e.toString())
+    }
+
+    fun open(path: String) {
+        loading = true
+        scope.launch {
+            try {
+                stage = Stage.Folder(client.list(path))
+            } catch (e: Exception) {
+                fail(e)
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    fun download(path: String, name: String) {
+        transfer = Transfer(name)
+        scope.launch {
+            try {
+                val sink = downloads.create(name)
+                val where = client.download(path, sink) { done, total ->
+                    transfer = Transfer(name, done, total)
+                }
+                transfer = Transfer(name, result = "Saved to $where")
+            } catch (e: CardException) {
+                transfer = Transfer(name, result = e.message)
+            } catch (e: Exception) {
+                fail(e)
+            }
+        }
+    }
 
     MaterialTheme(colorScheme = darkColorScheme()) {
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -51,22 +111,40 @@ fun App(radio: Radio, scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit)
                     Stage.Scan -> ScanScreen(scanner) { stage = Stage.Joining(it) }
                     is Stage.Joining -> {
                         LaunchedEffect(current) {
-                            stage = try {
+                            try {
                                 radio.join(current.code)
-                                Stage.Folder(client.list("/"))
+                                stage = Stage.Folder(client.list("/"))
                             } catch (e: Exception) {
-                                radio.leave()
-                                Stage.Failed(e.message ?: e.toString())
+                                fail(e)
                             }
                         }
                         Waiting("Joining ${current.code.ssid}")
                     }
-                    is Stage.Folder -> FolderScreen(current.listing)
+                    is Stage.Folder -> FolderScreen(
+                        listing = current.listing,
+                        loading = loading,
+                        transfer = transfer,
+                        onOpen = { entry ->
+                            val path = current.listing.path + entry.name
+                            if (entry.directory) {
+                                open("$path/")
+                            } else if (transfer?.result != null || transfer == null) {
+                                download(path, entry.name)
+                            }
+                        },
+                        onUp = { open(parentOf(current.listing.path)) },
+                    )
                     is Stage.Failed -> Failed(current.message) { stage = Stage.Scan }
                 }
             }
         }
     }
+}
+
+/** The folder above [path], which ends in `/`. */
+fun parentOf(path: String): String {
+    val trimmed = path.trimEnd('/')
+    return trimmed.substring(0, trimmed.lastIndexOf('/') + 1).ifEmpty { "/" }
 }
 
 @Composable
@@ -109,14 +187,37 @@ private fun Failed(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun FolderScreen(listing: Listing) {
+private fun FolderScreen(
+    listing: Listing,
+    loading: Boolean,
+    transfer: Transfer?,
+    onOpen: (Entry) -> Unit,
+    onUp: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(listing.path, style = MaterialTheme.typography.titleLarge)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                listing.path,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.StartEllipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (loading) CircularProgressIndicator()
+            OutlinedButton(onClick = onUp, enabled = listing.path != "/" && !loading) { Text("Up") }
+        }
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(listing.entries, key = { it.name }) { entry ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !loading) { onOpen(entry) }
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
                         if (entry.directory) "${entry.name}/" else entry.name,
@@ -127,10 +228,35 @@ private fun FolderScreen(listing: Listing) {
                 HorizontalDivider()
             }
         }
+        if (transfer != null) TransferLine(transfer)
         Text(
             "TeeToTum ${listing.version} · ${listing.entries.size} entries",
             style = MaterialTheme.typography.bodySmall,
         )
+    }
+}
+
+@Composable
+private fun TransferLine(transfer: Transfer) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (transfer.result != null) {
+            Text("${transfer.name}: ${transfer.result}", style = MaterialTheme.typography.bodyMedium)
+        } else {
+            val total = transfer.total
+            val shown = if (total != null) " of ${sizeText(total)}" else ""
+            Text(
+                "${transfer.name}: ${sizeText(transfer.done)}$shown",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (total != null && total > 0) {
+                LinearProgressIndicator(
+                    progress = { transfer.done.toFloat() / total },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+        }
     }
 }
 

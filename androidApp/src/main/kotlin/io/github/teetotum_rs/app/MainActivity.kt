@@ -1,5 +1,6 @@
 package io.github.teetotum_rs.app
 
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,7 +13,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         radio = AndroidRadio(applicationContext)
-        setContent { App(radio) { onCode -> Scanner(onCode) } }
+        val downloads = AndroidDownloads(applicationContext)
+        setContent { App(radio, downloads, debugCode()) { onCode -> Scanner(onCode) } }
+    }
+
+    /** In debug builds, `adb shell am start ... --es join 'WIFI:...'` stands in for the camera. */
+    private fun debugCode(): JoinCode? {
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) return null
+        return intent.getStringExtra("join")?.let(JoinCode::parse)
     }
 
     override fun onDestroy() {

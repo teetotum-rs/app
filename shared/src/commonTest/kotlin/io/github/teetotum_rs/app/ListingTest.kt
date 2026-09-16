@@ -50,3 +50,12 @@ class SizeTextTest {
         assertEquals("29.7 GiB", sizeText(31_902_400_512))
     }
 }
+
+class ParentTest {
+    @Test
+    fun goesUpOneFolder() {
+        assertEquals("/", parentOf("/"))
+        assertEquals("/", parentOf("/MUSIC/"))
+        assertEquals("/MUSIC/", parentOf("/MUSIC/雨/"))
+    }
+}
