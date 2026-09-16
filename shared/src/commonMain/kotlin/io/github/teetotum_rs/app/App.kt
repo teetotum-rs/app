@@ -50,7 +50,7 @@ private sealed interface Stage {
 /** Something the user is asked before it happens. */
 private sealed interface Question {
     data class Remove(val entry: Entry) : Question
-    data class Replace(val picks: List<Pick>, val taken: List<String>) : Question
+    data class Replace(val picks: List<Pick>, val taken: List<String>, val shared: Boolean) : Question
     data object NewFolder : Question
 }
 
@@ -66,7 +66,8 @@ private data class Transfer(
  * The whole app. [scanner] shows the camera and calls back with the first Knob code it reads;
  * [radio] joins that network; [downloads] keeps what is downloaded. [picker] returns a function
  * that lets the user pick files to send; [back] takes the system's back gesture while enabled.
- * A [code] given skips the scan.
+ * A [code] given skips the scan. [shared] holds files another app shared, offered for the folder
+ * the user opens until sent or declined, which [onShared] reports.
  */
 @Composable
 fun App(
@@ -75,6 +76,8 @@ fun App(
     code: JoinCode? = null,
     picker: @Composable (onPicked: (List<Pick>) -> Unit) -> () -> Unit,
     back: @Composable (enabled: Boolean, onBack: () -> Unit) -> Unit,
+    shared: Shared? = null,
+    onShared: () -> Unit = {},
     scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
 ) {
     val client = remember { CardClient(httpClient()) }
@@ -161,13 +164,21 @@ fun App(
         }
     }
 
-    val folder = stage as? Stage.Folder
-    val pick = picker { picks ->
-        val listing = (stage as? Stage.Folder)?.listing ?: return@picker
-        if (picks.isEmpty()) return@picker
+    /** Sends [picks] into the open folder, asking first where names are taken. */
+    fun send(picks: List<Pick>, fromShare: Boolean) {
+        val listing = (stage as? Stage.Folder)?.listing ?: return
+        if (picks.isEmpty()) return
         val taken = picks.map { it.name }.filter { name -> listing.entries.any { it.name == name } }
-        if (taken.isEmpty()) upload(listing.path, picks) else question = Question.Replace(picks, taken)
+        if (taken.isNotEmpty()) {
+            question = Question.Replace(picks, taken, fromShare)
+            return
+        }
+        if (fromShare) onShared()
+        upload(listing.path, picks)
     }
+
+    val folder = stage as? Stage.Folder
+    val pick = picker { picks -> send(picks, fromShare = false) }
     back(folder != null && folder.listing.path != "/" && !busy) {
         folder?.let { open(parentOf(it.listing.path)) }
     }
@@ -176,7 +187,7 @@ fun App(
         Surface(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
                 when (val current = stage) {
-                    Stage.Scan -> ScanScreen(scanner) { stage = Stage.Joining(it) }
+                    Stage.Scan -> ScanScreen(shared, scanner) { stage = Stage.Joining(it) }
                     is Stage.Joining -> {
                         LaunchedEffect(current) {
                             try {
@@ -195,6 +206,9 @@ fun App(
                             loading = loading,
                             busy = busy,
                             transfer = transfer,
+                            shared = shared,
+                            onSendShared = { shared?.let { send(it.picks, fromShare = true) } },
+                            onDropShared = onShared,
                             onOpen = { entry ->
                                 val path = here + entry.name
                                 if (entry.directory) open("$path/") else download(path, entry.name)
@@ -211,7 +225,10 @@ fun App(
                                     is Question.Remove -> change(here, asked.entry.name, "Deleted") {
                                         client.delete(here + asked.entry.name)
                                     }
-                                    is Question.Replace -> upload(here, asked.picks)
+                                    is Question.Replace -> {
+                                        if (asked.shared) onShared()
+                                        upload(here, asked.picks)
+                                    }
                                     Question.NewFolder -> change(here, name, "Made") {
                                         client.makeFolder(here + name)
                                     }
@@ -234,6 +251,7 @@ fun parentOf(path: String): String {
 
 @Composable
 private fun ScanScreen(
+    shared: Shared?,
     scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
     onCode: (JoinCode) -> Unit,
 ) {
@@ -243,6 +261,12 @@ private fun ScanScreen(
             "Open Card over Wi-Fi on the Knob and point the camera at the code on its screen.",
             style = MaterialTheme.typography.bodyLarge,
         )
+        if (shared != null && shared.picks.isNotEmpty()) {
+            Text(
+                "${filesText(shared.picks.size)} to send; you choose the folder once the card shows.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
         Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) { scanner(onCode) }
     }
 }
@@ -277,6 +301,9 @@ private fun FolderScreen(
     loading: Boolean,
     busy: Boolean,
     transfer: Transfer?,
+    shared: Shared?,
+    onSendShared: () -> Unit,
+    onDropShared: () -> Unit,
     onOpen: (Entry) -> Unit,
     onHold: (Entry) -> Unit,
     onUp: () -> Unit,
@@ -303,6 +330,7 @@ private fun FolderScreen(
             OutlinedButton(onClick = onNewFolder, enabled = !busy) { Text("New folder") }
             Button(onClick = onUpload, enabled = !busy) { Text("Upload files") }
         }
+        if (shared != null) SharedOffer(shared, busy, onSendShared, onDropShared)
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(listing.entries, key = { it.name }) { entry ->
                 Row(
@@ -333,6 +361,30 @@ private fun FolderScreen(
     }
 }
 
+/** The files another app shared, offered for the folder on screen. */
+@Composable
+private fun SharedOffer(shared: Shared, busy: Boolean, onSend: () -> Unit, onDrop: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium) {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val count = shared.picks.size
+            Text(if (count == 0) "The share holds no file to send." else "Send ${filesText(count)} into this folder?")
+            if (shared.skipped > 0) {
+                Text(
+                    "${filesText(shared.skipped)} could not be read.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (count > 0) Button(onClick = onSend, enabled = !busy) { Text("Send here") }
+                OutlinedButton(onClick = onDrop) { Text(if (count == 0) "OK" else "Cancel") }
+            }
+        }
+    }
+}
+
+/** "1 file", "3 files". */
+fun filesText(count: Int) = if (count == 1) "1 file" else "$count files"
+
 /** Asks [question]; [onYes] gets the folder name the user typed, or "" where none is asked. */
 @Composable
 private fun Ask(question: Question, onDismiss: () -> Unit, onYes: (String) -> Unit) {
@@ -344,7 +396,7 @@ private fun Ask(question: Question, onDismiss: () -> Unit, onYes: (String) -> Un
             "Delete",
         )
         is Question.Replace -> Triple(
-            "Replace ${question.taken.size} file${if (question.taken.size == 1) "" else "s"}?",
+            "Replace ${filesText(question.taken.size)}?",
             question.taken.joinToString("\n"),
             "Replace",
         )

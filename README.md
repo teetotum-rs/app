@@ -5,7 +5,7 @@ in the Knob over Wi-Fi.
 
 On the Knob, open **Card over Wi-Fi**. The app scans the QR code on the screen, joins the
 network the Knob offers and shows the card: browse folders, download and upload files, create
-folders, delete.
+folders, delete. Files shared from another app are offered for the folder you open.
 
 The app needs firmware 0.3.3 or later, where a folder answers as JSON.
 

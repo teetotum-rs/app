@@ -21,10 +21,10 @@ fun rememberPicker(onPicked: (List<Pick>) -> Unit): () -> Unit {
 }
 
 /** A picked document, or null where the provider does not tell its size, which the Knob needs first. */
-private fun pickOf(context: Context, uri: Uri): Pick? {
+internal fun pickOf(context: Context, uri: Uri): Pick? {
     val resolver = context.contentResolver
-    val columns = arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE, DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-    val (name, size, modified) = resolver.query(uri, columns, null, null, null)?.use { row ->
+    // All columns: a provider throws on a named column it lacks, and shared media has no last-modified.
+    val (name, size, modified) = resolver.query(uri, null, null, null, null)?.use { row ->
         if (!row.moveToFirst()) return null
         fun long(column: String) = row.getColumnIndex(column).takeIf { it >= 0 && !row.isNull(it) }?.let(row::getLong)
         val name = row.getColumnIndex(OpenableColumns.DISPLAY_NAME).takeIf { it >= 0 }?.let(row::getString)

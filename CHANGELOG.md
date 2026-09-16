@@ -6,9 +6,15 @@ All notable changes to the app are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Share files from any app to TeeToTum: they are offered for the folder you open, with the same
+  question before replacing.
+
 ### Fixed
 
 - The camera preview no longer covers the hint above it.
+- Files from providers without a last-modified column, such as shared media, can be sent.
 
 ## [0.1.0] - 2026-09-16
 
