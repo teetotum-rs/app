@@ -30,6 +30,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Installs next to a signed release instead of failing on the other key.
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
