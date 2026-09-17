@@ -14,18 +14,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -303,9 +300,9 @@ private fun ScanScreen(
         }
         if (open) {
             Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) { scanner(onCode) }
-            OutlinedButton(onClick = { open = false }) { Text("Close camera") }
+            ActionButton("Close camera", onClick = { open = false }, filled = false)
         } else {
-            Button(onClick = { open = true }) { Text("Scan code") }
+            ActionButton("Scan code", onClick = { open = true })
         }
     }
 }
@@ -330,7 +327,7 @@ private fun Failed(message: String, onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(message, style = MaterialTheme.typography.bodyLarge)
-        Button(onClick = onRetry) { Text("Scan again") }
+        ActionButton("Scan again", onClick = onRetry)
     }
 }
 
@@ -365,9 +362,9 @@ private fun FolderScreen(
             if (loading) CircularProgressIndicator()
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onUp, enabled = listing.path != "/" && !busy) { Text("Up") }
-            OutlinedButton(onClick = onNewFolder, enabled = !busy) { Text("New folder") }
-            Button(onClick = onUpload, enabled = !busy) { Text("Upload files") }
+            ActionButton("Up", onClick = onUp, enabled = listing.path != "/" && !busy, filled = false)
+            ActionButton("New folder", onClick = onNewFolder, enabled = !busy, filled = false)
+            ActionButton("Upload files", onClick = onUpload, enabled = !busy)
         }
         if (shared != null) SharedOffer(shared, busy, onSendShared, onDropShared)
         LazyColumn(modifier = Modifier.weight(1f)) {
@@ -414,8 +411,8 @@ private fun SharedOffer(shared: Shared, busy: Boolean, onSend: () -> Unit, onDro
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (count > 0) Button(onClick = onSend, enabled = !busy) { Text("Send here") }
-                OutlinedButton(onClick = onDrop) { Text(if (count == 0) "OK" else "Cancel") }
+                if (count > 0) ActionButton("Send here", onClick = onSend, enabled = !busy)
+                ActionButton(if (count == 0) "OK" else "Cancel", onClick = onDrop, filled = false)
             }
         }
     }
@@ -458,8 +455,8 @@ private fun Ask(question: Question, onDismiss: () -> Unit, onYes: (String) -> Un
                 Text(text)
             }
         },
-        confirmButton = { TextButton(onClick = { onYes(name.trim()) }, enabled = ready) { Text(yes) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { ActionButton(yes, onClick = { onYes(name.trim()) }, enabled = ready) },
+        dismissButton = { ActionButton("Cancel", onClick = onDismiss, filled = false) },
     )
 }
 

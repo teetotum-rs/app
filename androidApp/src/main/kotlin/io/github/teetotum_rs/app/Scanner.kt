@@ -12,8 +12,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -56,7 +54,7 @@ fun Scanner(onCode: (JoinCode) -> Unit) {
     } else {
         LaunchedEffect(Unit) { ask.launch(Manifest.permission.CAMERA) }
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Button(onClick = { ask.launch(Manifest.permission.CAMERA) }) { Text("Allow the camera") }
+            ActionButton("Allow the camera", onClick = { ask.launch(Manifest.permission.CAMERA) })
         }
     }
 }

@@ -17,6 +17,7 @@ All notable changes to the app are listed here. The format follows
 ### Changed
 
 - The camera opens only when you tap Scan code.
+- All buttons look like the action buttons on the libraries page, including those in dialogs.
 
 ### Fixed
 
