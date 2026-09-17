@@ -298,6 +298,7 @@ internal fun sectionsOf(text: String): Pair<String, List<Pair<String, String>>> 
 
 /** The icon on each card of the Markdown pages, by its heading; every version in the changelog has [ReleaseIcon]. */
 internal val SECTION_ICONS: Map<String, ImageVector> = mapOf(
+    "Menu" to MenuIcon,
     "Getting around" to GettingAroundIcon,
     "Connect" to ScanIcon,
     "On the card" to CardIcon,

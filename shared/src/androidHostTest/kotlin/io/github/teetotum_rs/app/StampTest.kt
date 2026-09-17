@@ -22,6 +22,11 @@ class StampTest {
     }
 
     @Test
+    fun showsLocalDateAndTime() {
+        assertEquals("2026-09-16 16:05:09", dateTimeText(1789567509000))
+    }
+
+    @Test
     fun holdsTimesBeforeFat() {
         assertEquals("19800101000000", cardStamp(0))
     }

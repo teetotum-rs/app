@@ -13,6 +13,10 @@ actual fun cardStamp(millis: Long): String {
     return held.format(FORMAT)
 }
 
+actual fun dateTimeText(millis: Long): String =
+    LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault()).format(SHOWN)
+
 private val FIRST = LocalDateTime.of(1980, 1, 1, 0, 0, 0)
 private val LAST = LocalDateTime.of(2107, 12, 31, 23, 59, 59)
 private val FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+private val SHOWN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")

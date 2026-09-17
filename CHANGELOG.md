@@ -9,7 +9,8 @@ All notable changes to the app are listed here. The format follows
 ### Added
 
 - Home, the first page in the menu and the one the app opens on, with a card for each feature.
-- Status over Bluetooth shows the Knob's firmware, its card, how long it has run and how many Wi-Fi networks it sees.
+- Status over Bluetooth shows the Knob's firmware, its card, how long it has run, how many Wi-Fi networks it sees and when it read them.
+- Help describes how the menu works.
 - About, in the menu and as a page with a card each, gathers help, imprint, privacy, changelog and libraries.
 - In the menu the pages sit indented under Home and About, and the arrow beside each folds them away.
 - Settings show an icon before each card and setting title.

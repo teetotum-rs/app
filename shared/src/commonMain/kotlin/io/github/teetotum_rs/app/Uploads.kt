@@ -20,5 +20,8 @@ expect fun nowMillis(): Long
 /** A time as the Knob takes it, `YYYYMMDDhhmmss` in local time, held to the years FAT can store. */
 expect fun cardStamp(millis: Long): String
 
+/** [millis] as the phone's local date and time to show, `2026-09-17 12:30:05`. */
+expect fun dateTimeText(millis: Long): String
+
 /** Files another app shared with this one; [skipped] counts those that could not be sent. */
 class Shared(val picks: List<Pick>, val skipped: Int)

@@ -1,12 +1,21 @@
 TeeToTum is the phone app for the TeeToTum Knob. It reads the card in the Knob over Wi-Fi: browse
 its folders, download and upload files, make folders and delete.
 
+## Menu
+
+The button at the top left opens the menu with every page of the app.
+
+- Tap a page to open it. The menu closes, and next time it marks the page you are on.
+- **Home** and **About** have their pages indented under them. The arrow at the end of each folds those
+  pages away or shows them again; the menu keeps that while the app is open.
+- **Settings** opens the settings, as the gear at the top right does.
+- **Exit**, below the line, closes the app.
+- The cross at the top, a tap beside the menu, a swipe to the left or the back gesture close it and leave
+  the page as it was.
+
 ## Getting around
 
-- The button at the top left opens the menu with every page of the app.
 - **Home** shows a card for each feature, **About** one for each page about the app; tap a card to open it.
-  In the menu their pages sit under them, and the arrow beside each folds them away.
-- The gear at the top right, or **Settings** at the end of the menu, opens the settings.
 - The back gesture leads to the page above: from a page under **About** to **About**, from any other to **Home**.
 
 ## Connect
@@ -21,7 +30,8 @@ The Knob needs firmware 0.3.3 or later.
 
 Choose **Status over Bluetooth** on **Home** or in the menu. The app asks for Bluetooth, finds the
 Knob nearby and shows its firmware, the size of its card, how long it has run and how many Wi-Fi
-networks it sees; **Read again** fetches them anew. The Knob's screen can show anything meanwhile.
+networks it sees. **Read at** is the phone's date and time of that reading, since the Knob has no clock;
+**Read again** fetches everything anew. The Knob's screen can show anything meanwhile.
 
 ## On the card
 
