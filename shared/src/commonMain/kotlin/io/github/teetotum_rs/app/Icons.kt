@@ -1,12 +1,22 @@
 package io.github.teetotum_rs.app
 
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 
-/** A 24 dp icon from a Material Symbols Outlined path (Apache 2.0); `Icon` tints it. */
+/** Every icon in the app, in the primary colour, like the dot of a selected radio button. */
+@Composable
+fun AppIcon(icon: ImageVector, contentDescription: String?, modifier: Modifier = Modifier) {
+    Icon(icon, contentDescription, modifier, tint = MaterialTheme.colorScheme.primary)
+}
+
+/** A 24 dp icon from a Material Symbols Outlined path (Apache 2.0); [AppIcon] tints it. */
 private fun symbol(name: String, path: String) =
     ImageVector.Builder(name, 24.dp, 24.dp, 960f, 960f)
         // Material Symbols draw in a viewport from y = -960 to 0.

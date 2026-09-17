@@ -12,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -61,7 +60,7 @@ fun TopBar(title: String, onMenu: () -> Unit, onSettings: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onMenu) { Icon(MenuIcon, contentDescription = "Open menu", modifier = Modifier.size(BAR_ICON)) }
+        IconButton(onClick = onMenu) { AppIcon(MenuIcon, contentDescription = "Open menu", modifier = Modifier.size(BAR_ICON)) }
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,
@@ -69,7 +68,7 @@ fun TopBar(title: String, onMenu: () -> Unit, onSettings: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = onSettings) { Icon(SettingsIcon, contentDescription = "Open settings") }
+        IconButton(onClick = onSettings) { AppIcon(SettingsIcon, contentDescription = "Open settings") }
     }
 }
 
@@ -79,23 +78,25 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
     // Narrower than Material's 360 dp, so the page stays in sight on a phone of that width.
     ModalDrawerSheet(drawerState = drawer, modifier = Modifier.width(300.dp)) {
         Row(modifier = Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) { Icon(CloseIcon, contentDescription = "Close menu", modifier = Modifier.size(BAR_ICON)) }
+            IconButton(onClick = onClose) { AppIcon(CloseIcon, contentDescription = "Close menu", modifier = Modifier.size(BAR_ICON)) }
             Text("TeeToTum", style = MaterialTheme.typography.titleLarge)
         }
         Column(modifier = Modifier.padding(12.dp)) {
             for (entry in Page.entries) {
                 NavigationDrawerItem(
                     label = { Text(entry.title) },
-                    icon = { Icon(entry.icon, contentDescription = null) },
+                    icon = { AppIcon(entry.icon, contentDescription = null) },
                     selected = entry == page,
+                    shape = ButtonShape,
                     onClick = { onPage(entry) },
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             NavigationDrawerItem(
                 label = { Text("Exit") },
-                icon = { Icon(ExitIcon, contentDescription = null) },
+                icon = { AppIcon(ExitIcon, contentDescription = null) },
                 selected = false,
+                shape = ButtonShape,
                 onClick = onExit,
             )
         }
@@ -164,10 +165,20 @@ private fun textOf(page: Page): String = when (page) {
 }
 
 private const val HELP = """
+TeeToTum is the phone app for the TeeToTum Knob. It reads the card in the Knob over Wi-Fi: browse
+its folders, download and upload files, make folders and delete.
+
+## Getting around
+
+- The button at the top left opens the menu with every page of the app.
+- The gear at the top right opens the settings.
+- The back gesture leads from any other page back to **Card over Wi-Fi**.
+
 ## Connect
 
 On the Knob, open **Card over Wi-Fi**. In the app, choose **Card over Wi-Fi** in the menu, tap **Scan code**
 and point the camera at the code on the Knob's screen; the phone joins the network the Knob offers and shows the card.
+**Close camera** stops scanning. If joining fails, **Scan again** opens the camera straight away.
 
 The Knob needs firmware 0.3.3 or later.
 
@@ -175,19 +186,64 @@ The Knob needs firmware 0.3.3 or later.
 
 - Tap a folder to open it; **Up** or the back gesture goes to the folder above.
 - Tap a file to download it into `Download/TeeToTum` on the phone.
-- **Upload files** sends files from the phone into the open folder, asking before a file of the
-  same name is replaced.
+- **Upload files** sends files from the phone into the open folder, asking before a file of the same name is replaced.
 - **New folder** makes a folder in the open one.
 - Hold a file or an empty folder to delete it.
 
 ## From other apps
 
 Share files to TeeToTum from any app. Once the card shows, they are offered for the folder you
-open.
+open: **Send here** uploads them into it, **Cancel** drops them.
+
+## Settings
+
+**Theme** sets the app's colours: the phone's own, GitHub's, or the Knob's red. Each follows the
+phone's light or dark mode.
+
+## The menu
+
+- **Help** is this page.
+- **Imprint** and **Privacy** say who makes the app and what it does with your data.
+- **Changelog** lists what changed in each version.
+- **Libraries** names the open-source libraries the app is built on, with their licences.
+- **Exit** closes the app.
 """
 
 private const val IMPRINT = """
-The imprint will follow.
+## Provider (§ 5 DDG)
+
+Stefan Grühn\
+Sesenheimer Str. 16\
+10627 Berlin\
+Germany
+
+## Contact
+
+Email: <stefan.gruehn@gmail.com>
+
+## The app and the Knob
+
+Stefan Grühn wrote this app. Its source code is at
+[github.com/teetotum-rs/app](https://github.com/teetotum-rs/app), under the MIT or Apache 2.0
+licence, at your choice.
+
+The Knob it talks to runs the TeeToTum firmware, from
+[github.com/teetotum-rs/firmware](https://github.com/teetotum-rs/firmware). Questions and bug
+reports are welcome as issues in either repository.
+
+## Liability
+
+The app is provided as is, without warranty. It reads, writes and deletes files on the Knob's
+card; keep a copy of anything you cannot afford to lose.
+
+## Links
+
+This page links to external websites whose content I have no influence over. The respective
+provider is responsible for that content. No infringements were apparent at the time of linking.
+
+## Last updated
+
+17 September 2026
 """
 
 private const val PRIVACY = """

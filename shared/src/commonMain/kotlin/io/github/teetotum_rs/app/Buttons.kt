@@ -14,6 +14,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** The corners of every button, and of the menu entries beside them. */
+val ButtonShape = RoundedCornerShape(8.dp)
+
 /**
  * The one button of the app, drawn like the action chips on the libraries page: filled for the
  * main action, outlined for the others. Material's own buttons are not used anywhere else.
@@ -43,7 +46,7 @@ fun ActionButton(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        shape = RoundedCornerShape(8.dp),
+        shape = ButtonShape,
         color = container,
         contentColor = content,
         border = if (filled) null else BorderStroke(1.dp, if (enabled) colors.outline else faded),
@@ -51,7 +54,7 @@ fun ActionButton(
         Text(
             label,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

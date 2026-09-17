@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The knob's favicon on the 108 dp adaptive canvas: its 500 units span the 72 dp the mask shows. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.144" android:scaleY="0.144" android:translateX="18" android:translateY="18">
+        <path android:fillColor="#000" android:pathData="M28,250 A222,222 0 1 1 472,250 A222,222 0 1 1 28,250Z" />
+        <path android:fillColor="#f39a96" android:pathData="M197,51 A206,206 0 0 1 303,51 L286,115 A140,140 0 0 0 214,115Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#a51d1e" android:pathData="M303,51 A206,206 0 0 1 396,104 L349,151 A140,140 0 0 0 286,115Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#a51d1e" android:pathData="M396,104 A206,206 0 0 1 449,197 L385,214 A140,140 0 0 0 349,151Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#a51d1e" android:pathData="M449,197 A206,206 0 0 1 449,303 L385,286 A140,140 0 0 0 385,214Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#4c0709" android:pathData="M449,303 A206,206 0 0 1 396,396 L349,349 A140,140 0 0 0 385,286Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#4c0709" android:pathData="M396,396 A206,206 0 0 1 303,449 L286,385 A140,140 0 0 0 349,349Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#4c0709" android:pathData="M303,449 A206,206 0 0 1 197,449 L214,385 A140,140 0 0 0 286,385Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#4c0709" android:pathData="M197,449 A206,206 0 0 1 104,396 L151,349 A140,140 0 0 0 214,385Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#4c0709" android:pathData="M104,396 A206,206 0 0 1 51,303 L115,286 A140,140 0 0 0 151,349Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#4c0709" android:pathData="M51,303 A206,206 0 0 1 51,197 L115,214 A140,140 0 0 0 115,286Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#a51d1e" android:pathData="M51,197 A206,206 0 0 1 104,104 L151,151 A140,140 0 0 0 115,214Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#a51d1e" android:pathData="M104,104 A206,206 0 0 1 197,51 L214,115 A140,140 0 0 0 151,151Z"
+            android:strokeColor="#000" android:strokeWidth="7" android:strokeLineJoin="round" />
+        <path android:fillColor="#f2f2f2" android:pathData="M170,168 h160 v40 h-60 v128 h-40 v-128 h-60z" />
+    </group>
+</vector>

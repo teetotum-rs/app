@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 enum class Theme(val title: String, val detail: String) {
     System("Follow system", "Light or dark, as the phone is set"),
     GitHub("GitHub", "GitHub Light or Dark Default, as the phone is set"),
+    Red("Red", "The knob's red theme, light or dark as the phone is set"),
 }
 
 /** GitHub Light Default, from Primer's github-light-default. */
@@ -95,11 +96,80 @@ private val GitHubDark = darkColorScheme(
     outlineVariant = Color(0xFF30363D),
 )
 
+/** The knob's red theme: its ring shades on black, cyan where the knob draws icons. */
+private val RedDark = darkColorScheme(
+    primary = Color(0xFFF0283A),
+    onPrimary = Color(0xFF1A0406),
+    primaryContainer = Color(0xFF5E0E14),
+    onPrimaryContainer = Color(0xFFFFFFFF),
+    inversePrimary = Color(0xFFC41E2E),
+    secondary = Color(0xFF55F4FF),
+    onSecondary = Color(0xFF00363D),
+    secondaryContainer = Color(0xFF2F070A),
+    onSecondaryContainer = Color(0xFFFFFFFF),
+    tertiary = Color(0xFF90EE90),
+    onTertiary = Color(0xFF0A2A0A),
+    background = Color(0xFF000000),
+    onBackground = Color(0xFFFFFFFF),
+    surface = Color(0xFF000000),
+    onSurface = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFF1A0507),
+    onSurfaceVariant = Color(0xFF9A9A9A),
+    surfaceDim = Color(0xFF000000),
+    surfaceBright = Color(0xFF3D0B10),
+    surfaceContainerLowest = Color(0xFF000000),
+    surfaceContainerLow = Color(0xFF120305),
+    surfaceContainer = Color(0xFF1A0507),
+    surfaceContainerHigh = Color(0xFF2F070A),
+    surfaceContainerHighest = Color(0xFF3D0B10),
+    inverseSurface = Color(0xFFFFFFFF),
+    inverseOnSurface = Color(0xFF000000),
+    error = Color(0xFFFFB547),
+    onError = Color(0xFF1A0E00),
+    outline = Color(0xFF5E0E14),
+    outlineVariant = Color(0xFF5E0E14),
+)
+
+/** [RedDark] on white: the red and cyan darkened until text on and beside them stays readable. */
+private val RedLight = lightColorScheme(
+    primary = Color(0xFFC41E2E),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFDADC),
+    onPrimaryContainer = Color(0xFF5E0E14),
+    inversePrimary = Color(0xFFF0283A),
+    secondary = Color(0xFF006874),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFFCE8E9),
+    onSecondaryContainer = Color(0xFF2F070A),
+    tertiary = Color(0xFF1B6E2A),
+    onTertiary = Color(0xFFFFFFFF),
+    background = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF1F1012),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1F1012),
+    surfaceVariant = Color(0xFFFFF4F4),
+    onSurfaceVariant = Color(0xFF666666),
+    surfaceDim = Color(0xFFF5D6D8),
+    surfaceBright = Color(0xFFFFFFFF),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFFFF4F4),
+    surfaceContainer = Color(0xFFFFF0F0),
+    surfaceContainerHigh = Color(0xFFFCE8E9),
+    surfaceContainerHighest = Color(0xFFF5D6D8),
+    inverseSurface = Color(0xFF1F1012),
+    inverseOnSurface = Color(0xFFFFFFFF),
+    error = Color(0xFF9A5B00),
+    onError = Color(0xFFFFFFFF),
+    outline = Color(0xFFE8B4B8),
+    outlineVariant = Color(0xFFE8B4B8),
+)
+
 /** The colour scheme [theme] stands for on this phone. */
 @Composable
 fun colorSchemeOf(theme: Theme): ColorScheme = when (theme) {
     Theme.System -> if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
     Theme.GitHub -> if (isSystemInDarkTheme()) GitHubDark else GitHubLight
+    Theme.Red -> if (isSystemInDarkTheme()) RedDark else RedLight
 }
 
 /** Settings, grouped in cards. */
