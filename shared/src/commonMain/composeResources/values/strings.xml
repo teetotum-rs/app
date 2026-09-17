@@ -147,7 +147,7 @@
     <string name="bluetooth_error_off">Bluetooth is off. Turn it on and try again.</string>
     <string name="bluetooth_error_search">Could not search for the Knob (%1$d).</string>
     <string name="bluetooth_error_out_of_range">No Knob in range.</string>
-    <string name="bluetooth_error_connect">Could not connect to the Knob.</string>
+    <string name="bluetooth_error_connect">Could not connect to the Knob. Bring the phone closer and try again.</string>
     <string name="bluetooth_error_services">The Knob did not list its services.</string>
     <string name="bluetooth_error_silent">The Knob did not answer.</string>
     <string name="bluetooth_error_disconnected">The Knob ended the connection.</string>

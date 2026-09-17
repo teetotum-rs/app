@@ -20,8 +20,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.ParcelUuid
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
@@ -138,12 +140,9 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         } catch (_: TimeoutCancellationException) {
             throw BluetoothFailed(Res.string.bluetooth_error_out_of_range)
         }
-        val session = Session(device)
-        val gatt = device.connectGatt(context, false, session.callback, BluetoothDevice.TRANSPORT_LE)
-            ?: throw BluetoothFailed(Res.string.bluetooth_error_connect)
-        session.gatt = gatt
+        val session = connect(device)
+        val gatt = session.gatt
         return try {
-            session.expect<Event.Connected>()
             gatt.discoverServices()
             if (!session.expect<Event.Discovered>().ok) throw BluetoothFailed(Res.string.bluetooth_error_services)
             session.block()
@@ -151,6 +150,30 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
             gatt.disconnect()
             gatt.close()
         }
+    }
+
+    /**
+     * Connects to [device]. Android fails an attempt now and then right away (status 133), so a
+     * connection that does not come about is tried again before giving up.
+     */
+    private suspend fun connect(device: BluetoothDevice): Session {
+        repeat(CONNECT_ATTEMPTS) { attempt ->
+            if (attempt > 0) delay(CONNECT_RETRY_MS)
+            val session = Session(device)
+            val gatt = device.connectGatt(context, false, session.callback, BluetoothDevice.TRANSPORT_LE)
+                ?: throw BluetoothFailed(Res.string.bluetooth_error_connect)
+            session.gatt = gatt
+            val event = try {
+                withTimeoutOrNull(STEP_TIMEOUT_MS) { session.events.receive() }
+            } catch (cancelled: CancellationException) {
+                gatt.close()
+                throw cancelled
+            }
+            if (event == Event.Connected) return session
+            gatt.close()
+            if (event == null) throw BluetoothFailed(Res.string.bluetooth_error_connect)
+        }
+        throw BluetoothFailed(Res.string.bluetooth_error_connect)
     }
 
     /**
@@ -397,6 +420,8 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
     private companion object {
         const val SCAN_TIMEOUT_MS = 10_000L
         const val STEP_TIMEOUT_MS = 15_000L
+        const val CONNECT_ATTEMPTS = 3
+        const val CONNECT_RETRY_MS = 500L
         const val ABORT_TIMEOUT_MS = 2_000L
 
         /** Long enough for the user to find and accept the phone's pairing request. */
