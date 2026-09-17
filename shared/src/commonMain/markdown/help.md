@@ -17,6 +17,12 @@ and point the camera at the code on the Knob's screen; the phone joins the netwo
 
 The Knob needs firmware 0.3.3 or later.
 
+## Status over Bluetooth
+
+Choose **Status over Bluetooth** on **Home** or in the menu. The app asks for Bluetooth, finds the
+Knob nearby and shows how long it has run and how many Wi-Fi networks it sees; **Read again**
+fetches both anew. The Knob's screen can show anything meanwhile.
+
 ## On the card
 
 - Tap a folder to open it; **Up** or the back gesture goes to the folder above.

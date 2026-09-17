@@ -44,6 +44,7 @@ import com.mikepenz.markdown.m3.markdownTypography
 enum class Page(val title: String, val icon: ImageVector) {
     Home("Home", HomeIcon),
     Card("Card over Wi-Fi", WifiIcon),
+    Status("Status over Bluetooth", BluetoothIcon),
     About("About", AboutIcon),
     Help("Help", HelpIcon),
     Imprint("Imprint", ImprintIcon),
@@ -57,6 +58,7 @@ enum class Page(val title: String, val icon: ImageVector) {
 private val GROUPS: Map<Page, List<Pair<Page, String>>> = mapOf(
     Page.Home to listOf(
         Page.Card to "Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.",
+    Page.Status to "See over Bluetooth how long the Knob has run and how many Wi-Fi networks it sees.",
     ),
     Page.About to listOf(
         Page.Help to "How to use the app, page by page.",
@@ -232,7 +234,7 @@ private fun MarkdownPage(page: Page) {
 }
 
 @Composable
-private fun CardColumn(content: @Composable () -> Unit) {
+internal fun CardColumn(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -241,7 +243,7 @@ private fun CardColumn(content: @Composable () -> Unit) {
 
 /** A card with [icon] and [title] above its [content]; with [onClick], tapping the card calls it. */
 @Composable
-private fun PageCard(icon: ImageVector, title: String, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+internal fun PageCard(icon: ImageVector, title: String, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
     val inner: @Composable () -> Unit = {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -301,6 +303,8 @@ internal val SECTION_ICONS: Map<String, ImageVector> = mapOf(
     "Last updated" to DateIcon,
     "Camera" to CameraIcon,
     "Wi-Fi" to WifiIcon,
+    "Bluetooth" to BluetoothIcon,
+    "Status over Bluetooth" to BluetoothIcon,
     "Files" to FolderIcon,
 )
 
@@ -313,5 +317,5 @@ internal fun textOf(page: Page): String = when (page) {
     Page.Privacy -> PRIVACY
     // The changelog's own title and preamble repeat what the page title says.
     Page.Changelog -> CHANGELOG.substring(CHANGELOG.indexOf("\n## ").coerceAtLeast(0))
-    Page.Home, Page.Card, Page.About, Page.Settings, Page.Libraries -> ""
+    Page.Home, Page.Card, Page.Status, Page.About, Page.Settings, Page.Libraries -> ""
 }

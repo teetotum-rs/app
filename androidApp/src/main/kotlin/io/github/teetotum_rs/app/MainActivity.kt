@@ -26,11 +26,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         radio = AndroidRadio(applicationContext)
         val downloads = AndroidDownloads(applicationContext)
+        val bluetooth = AndroidBluetooth(applicationContext)
         shared = sharedOf(this, intent)
         setContent {
             App(
                 radio,
                 downloads,
+                bluetooth,
+                bluetoothAccess = { content -> BluetoothAccess(content) },
                 debugCode(),
                 picker = { onPicked -> rememberPicker(onPicked) },
                 back = { enabled, onBack -> BackHandler(enabled, onBack) },

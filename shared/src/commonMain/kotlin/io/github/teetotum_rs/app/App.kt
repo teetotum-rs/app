@@ -70,7 +70,8 @@ private data class Transfer(
 
 /**
  * The whole app. [scanner] shows the camera and calls back with the first Knob code it reads;
- * [radio] joins that network; [downloads] keeps what is downloaded. [picker] returns a function
+ * [radio] joins that network; [downloads] keeps what is downloaded. [bluetooth] reads the Knob's status
+ * once [bluetoothAccess] has asked for Bluetooth. [picker] returns a function
  * that lets the user pick files to send; [back] takes the system's back gesture while enabled.
  * A [code] given skips the scan. [shared] holds files another app shared, offered for the folder
  * the user opens until sent or declined, which [onShared] reports. [onExit] closes the app from
@@ -81,6 +82,8 @@ private data class Transfer(
 fun App(
     radio: Radio,
     downloads: Downloads,
+    bluetooth: Bluetooth,
+    bluetoothAccess: @Composable (content: @Composable () -> Unit) -> Unit,
     code: JoinCode? = null,
     picker: @Composable (onPicked: (List<Pick>) -> Unit) -> () -> Unit,
     back: @Composable (enabled: Boolean, onBack: () -> Unit) -> Unit,
@@ -223,7 +226,7 @@ fun App(
                 Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                     TopBar(page.title, onMenu = { scope.launch { drawer.open() } }, onSettings = { page = Page.Settings })
                     Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
-                        if (page != Page.Card) PageContent(page, libraries, theme, onTheme, onPage = { page = it }) else when (val current = stage) {
+                        if (page == Page.Status) StatusPage(bluetooth, bluetoothAccess) else if (page != Page.Card) PageContent(page, libraries, theme, onTheme, onPage = { page = it }) else when (val current = stage) {
                             is Stage.Scan -> ScanScreen(current.camera, shared, scanner) { stage = Stage.Joining(it) }
                             is Stage.Joining -> {
                                 LaunchedEffect(current) {
@@ -354,7 +357,7 @@ private fun Viewfinder(
 }
 
 @Composable
-private fun Waiting(text: String) {
+internal fun Waiting(text: String) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
@@ -366,14 +369,14 @@ private fun Waiting(text: String) {
 }
 
 @Composable
-private fun Failed(message: String, onRetry: () -> Unit) {
+internal fun Failed(message: String, retry: String = "Scan again", onRetry: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(message, style = MaterialTheme.typography.bodyLarge)
-        ActionButton("Scan again", onClick = onRetry)
+        ActionButton(retry, onClick = onRetry)
     }
 }
 
