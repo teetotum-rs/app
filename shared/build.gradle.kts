@@ -6,6 +6,24 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
 }
 
+// CHANGELOG.md, compiled in as the string CHANGELOG so the app shows the changelog of its own build.
+val changelog = tasks.register("generateChangelog") {
+    val source = rootProject.layout.projectDirectory.file("CHANGELOG.md")
+    val output = layout.buildDirectory.dir("generated/changelog/commonMain/kotlin")
+    inputs.file(source)
+    outputs.dir(output)
+    doLast {
+        val escaped = source.asFile.readText()
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("$", "\\$")
+            .replace("\n", "\\n")
+        val file = output.get().file("io/github/teetotum_rs/app/Changelog.kt").asFile
+        file.parentFile.mkdirs()
+        file.writeText("package io.github.teetotum_rs.app\n\nval CHANGELOG = \"$escaped\"\n")
+    }
+}
+
 kotlin {
     jvmToolchain(17)
 
@@ -17,6 +35,9 @@ kotlin {
     }
 
     sourceSets {
+        commonMain {
+            kotlin.srcDir(changelog)
+        }
         commonMain.dependencies {
             api(libs.compose.runtime)
             api(libs.compose.foundation)
@@ -25,6 +46,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.ktor.client.core)
+            implementation(libs.aboutlibraries.compose.m3)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

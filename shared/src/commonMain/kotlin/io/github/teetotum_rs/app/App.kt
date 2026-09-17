@@ -16,15 +16,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,7 +69,9 @@ private data class Transfer(
  * [radio] joins that network; [downloads] keeps what is downloaded. [picker] returns a function
  * that lets the user pick files to send; [back] takes the system's back gesture while enabled.
  * A [code] given skips the scan. [shared] holds files another app shared, offered for the folder
- * the user opens until sent or declined, which [onShared] reports.
+ * the user opens until sent or declined, which [onShared] reports. [onExit] closes the app from
+ * the menu; [libraries] reads the list of libraries it shows. [theme] sets the colours, [onTheme]
+ * takes a new choice from the settings.
  */
 @Composable
 fun App(
@@ -78,6 +82,10 @@ fun App(
     back: @Composable (enabled: Boolean, onBack: () -> Unit) -> Unit,
     shared: Shared? = null,
     onShared: () -> Unit = {},
+    onExit: () -> Unit = {},
+    libraries: suspend () -> String = { "{}" },
+    theme: Theme = Theme.System,
+    onTheme: (Theme) -> Unit = {},
     scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
 ) {
     val client = remember { CardClient(httpClient()) }
@@ -86,6 +94,8 @@ fun App(
     var loading by remember { mutableStateOf(false) }
     var transfer by remember { mutableStateOf<Transfer?>(null) }
     var question by remember { mutableStateOf<Question?>(null) }
+    var page by remember { mutableStateOf(Page.Card) }
+    val drawer = rememberDrawerState(DrawerValue.Closed)
     val busy = loading || transfer?.let { it.result == null } == true
 
     fun fail(e: Exception) {
@@ -182,61 +192,83 @@ fun App(
     back(folder != null && folder.listing.path != "/" && !busy) {
         folder?.let { open(parentOf(it.listing.path)) }
     }
+    back(page != Page.Card) { page = Page.Card }
 
-    MaterialTheme(colorScheme = darkColorScheme()) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
-                when (val current = stage) {
-                    Stage.Scan -> ScanScreen(shared, scanner) { stage = Stage.Joining(it) }
-                    is Stage.Joining -> {
-                        LaunchedEffect(current) {
-                            try {
-                                radio.join(current.code)
-                                stage = Stage.Folder(client.list("/"))
-                            } catch (e: Exception) {
-                                fail(e)
+    MaterialTheme(colorScheme = colorSchemeOf(theme)) {
+        ModalNavigationDrawer(
+            drawerState = drawer,
+            // Opened by the button only: a swipe from the left edge is Android's back gesture.
+            gesturesEnabled = drawer.isOpen,
+            drawerContent = {
+                Menu(
+                    drawer,
+                    page,
+                    onClose = { scope.launch { drawer.close() } },
+                    onPage = {
+                        page = it
+                        scope.launch { drawer.close() }
+                    },
+                    onExit = onExit,
+                )
+            },
+        ) {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+                    TopBar(page.title, onMenu = { scope.launch { drawer.open() } })
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                        if (page != Page.Card) PageContent(page, libraries, theme, onTheme) else when (val current = stage) {
+                            Stage.Scan -> ScanScreen(shared, scanner) { stage = Stage.Joining(it) }
+                            is Stage.Joining -> {
+                                LaunchedEffect(current) {
+                                    try {
+                                        radio.join(current.code)
+                                        stage = Stage.Folder(client.list("/"))
+                                    } catch (e: Exception) {
+                                        fail(e)
+                                    }
+                                }
+                                Waiting("Joining ${current.code.ssid}")
                             }
-                        }
-                        Waiting("Joining ${current.code.ssid}")
-                    }
-                    is Stage.Folder -> {
-                        val here = current.listing.path
-                        FolderScreen(
-                            listing = current.listing,
-                            loading = loading,
-                            busy = busy,
-                            transfer = transfer,
-                            shared = shared,
-                            onSendShared = { shared?.let { send(it.picks, fromShare = true) } },
-                            onDropShared = onShared,
-                            onOpen = { entry ->
-                                val path = here + entry.name
-                                if (entry.directory) open("$path/") else download(path, entry.name)
-                            },
-                            onHold = { question = Question.Remove(it) },
-                            onUp = { open(parentOf(here)) },
-                            onNewFolder = { question = Question.NewFolder },
-                            onUpload = pick,
-                        )
-                        question?.let { asked ->
-                            Ask(asked, onDismiss = { question = null }) { name ->
-                                question = null
-                                when (asked) {
-                                    is Question.Remove -> change(here, asked.entry.name, "Deleted") {
-                                        client.delete(here + asked.entry.name)
-                                    }
-                                    is Question.Replace -> {
-                                        if (asked.shared) onShared()
-                                        upload(here, asked.picks)
-                                    }
-                                    Question.NewFolder -> change(here, name, "Made") {
-                                        client.makeFolder(here + name)
+                            is Stage.Folder -> {
+                                val here = current.listing.path
+                                FolderScreen(
+                                    listing = current.listing,
+                                    loading = loading,
+                                    busy = busy,
+                                    transfer = transfer,
+                                    shared = shared,
+                                    onSendShared = { shared?.let { send(it.picks, fromShare = true) } },
+                                    onDropShared = onShared,
+                                    onOpen = { entry ->
+                                        val path = here + entry.name
+                                        if (entry.directory) open("$path/") else download(path, entry.name)
+                                    },
+                                    onHold = { question = Question.Remove(it) },
+                                    onUp = { open(parentOf(here)) },
+                                    onNewFolder = { question = Question.NewFolder },
+                                    onUpload = pick,
+                                )
+                                question?.let { asked ->
+                                    Ask(asked, onDismiss = { question = null }) { name ->
+                                        question = null
+                                        when (asked) {
+                                            is Question.Remove -> change(here, asked.entry.name, "Deleted") {
+                                                client.delete(here + asked.entry.name)
+                                            }
+                                            is Question.Replace -> {
+                                                if (asked.shared) onShared()
+                                                upload(here, asked.picks)
+                                            }
+                                            Question.NewFolder -> change(here, name, "Made") {
+                                                client.makeFolder(here + name)
+                                            }
+                                        }
                                     }
                                 }
                             }
+                            is Stage.Failed -> Failed(current.message) { stage = Stage.Scan }
                         }
                     }
-                    is Stage.Failed -> Failed(current.message) { stage = Stage.Scan }
                 }
             }
         }
@@ -256,7 +288,6 @@ private fun ScanScreen(
     onCode: (JoinCode) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("TeeToTum", style = MaterialTheme.typography.headlineMedium)
         Text(
             "Open Card over Wi-Fi on the Knob and point the camera at the code on its screen.",
             style = MaterialTheme.typography.bodyLarge,

@@ -8,6 +8,8 @@ All notable changes to the app are listed here. The format follows
 
 ### Added
 
+- A menu, opened from the top left: Card over Wi-Fi, help, imprint, privacy, changelog, the libraries the app uses and exit.
+- Settings, with a theme that follows the system or stays in GitHub's dark colours.
 - Share files from any app to TeeToTum: they are offered for the folder you open, with the same
   question before replacing.
 

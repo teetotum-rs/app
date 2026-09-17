@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
+    // Lists the app's libraries and their licences in R.raw.aboutlibraries.
+    alias(libs.plugins.aboutlibraries.android)
 }
 
 android {
