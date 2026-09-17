@@ -14,6 +14,7 @@ All notable changes to the app are listed here. The format follows
 - In the menu the pages sit indented under Home and About, and the arrow beside each folds them away.
 - Settings show an icon before each card and setting title.
 - Corner marks on the camera frame show how large the code should appear.
+- A monochrome launcher icon, for phones set to themed icons.
 
 ### Changed
 
