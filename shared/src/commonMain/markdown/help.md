@@ -51,6 +51,11 @@ Choose **Plugins over Bluetooth** on **Home** or in the menu. The page lists the
 Knob, open **Settings > Receive**, then tap **Send to Knob**. The app checks the plugin and shows how
 much is sent; the Knob restarts and asks whether to install it.
 
+**On the Knob** at the top lists the plugins the Knob holds, read when the page opens; **Read again**
+reads them anew. A plugin you sent has a **Delete** button, a built-in one has none. Open
+**Settings > Receive** on the Knob first, then tap **Delete** and confirm; the Knob deletes the plugin
+and restarts.
+
 ## About
 
 - **Help** is this page.

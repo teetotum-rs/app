@@ -36,8 +36,9 @@ private class OwnPlugin(val name: String, val wasm: ByteArray?, val about: Plugi
 private const val OWN = "own"
 
 /**
- * Plugins to send to the Knob over [bluetooth]: those in the catalogue, and one picked with
- * [picker]; [access] asks for Bluetooth first. [load] says whether the catalogue is read on opening or on tap.
+ * The plugins on the Knob over [bluetooth], to delete, and plugins to send to it: those in the
+ * catalogue, and one picked with [picker]; [access] asks for Bluetooth first. [load] says whether
+ * the catalogue is read on opening or on tap.
  */
 @Composable
 fun PluginsPage(
@@ -55,7 +56,9 @@ fun PluginsPage(
         var own by remember { mutableStateOf<OwnPlugin?>(null) }
         // The send in progress or last ended, by the plugin's id or OWN.
         var sending by remember { mutableStateOf<Pair<String, Sending>?>(null) }
-        val busy = sending.let { it != null && it.second.result == null }
+        val knob = remember { KnobPlugins(bluetooth) }
+        // One Bluetooth session at a time.
+        val busy = sending.let { it != null && it.second.result == null } || knob.busy
 
         LaunchedEffect(attempt) {
             if (attempt == 0) return@LaunchedEffect
@@ -79,6 +82,7 @@ fun PluginsPage(
 
         CardColumn {
             Text(stringResource(Res.string.plugins_intro), style = MaterialTheme.typography.bodyLarge)
+            KnobPluginsCard(knob, busy)
             if (attempt == 0) {
                 PageCard(Res.drawable.cloud_download, stringResource(Res.string.plugins_catalogue)) {
                     PluginLine(stringResource(Res.string.plugins_catalogue_hint))
@@ -219,7 +223,7 @@ private fun readAll(pick: Pick): ByteArray = pick.open().use { source ->
 private const val READ_BUFFER = 8192
 
 @Composable
-private fun PluginText(name: String?, summary: String, facts: String) {
+internal fun PluginText(name: String?, summary: String, facts: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (name != null) Text(name, style = MaterialTheme.typography.titleSmall)
         Text(summary, style = MaterialTheme.typography.bodyLarge)
@@ -228,7 +232,7 @@ private fun PluginText(name: String?, summary: String, facts: String) {
 }
 
 @Composable
-private fun PluginLine(text: String) {
+internal fun PluginLine(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 

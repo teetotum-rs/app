@@ -12,6 +12,15 @@ interface Bluetooth {
      * [progress] hears the module bytes sent. Throws [BluetoothFailed] when it cannot.
      */
     suspend fun sendPlugin(module: ByteArray, header: ByteArray, progress: (sent: Int) -> Unit)
+
+    /** The plugins on the Knob, bundled and in its slots; throws [BluetoothFailed] when it cannot. */
+    suspend fun plugins(): List<KnobPlugin>
+
+    /**
+     * Deletes the plugin in [slot] while the Knob's Settings > Receive is open, after which the Knob
+     * restarts. Throws [BluetoothFailed] when it cannot.
+     */
+    suspend fun deletePlugin(slot: Int)
 }
 
 class BluetoothFailed(override val shown: Message) :

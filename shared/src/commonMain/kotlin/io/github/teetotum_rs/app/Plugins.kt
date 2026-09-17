@@ -13,6 +13,12 @@ object PluginService {
     const val DATA = "81bcd10c-d2eb-4f6a-b4db-e196026f9f7c"
     const val STATUS = "1236b81e-8a6e-49bf-817a-210b74ac7990"
 
+    /** Write: the index of the plugin that [ENTRY] describes next. */
+    const val SELECT = "8d86b41e-f676-4ba8-896f-0d3baee6bae3"
+
+    /** Read: the plugin at the selected index, laid out as [entryOf] reads it. */
+    const val ENTRY = "2e229d9b-b681-4220-85ff-eb82a309ebcf"
+
     /** Control: the slot header follows. */
     const val BEGIN: Byte = 1
 
@@ -22,11 +28,17 @@ object PluginService {
     /** Control: the upload is dropped. */
     const val ABORT: Byte = 3
 
+    /** Control: the plugin in the slot that follows is deleted. */
+    const val DELETE: Byte = 4
+
     /** Status: a slot is erased and takes pieces. */
     const val READY = 1
 
     /** Status: the module is written, and the Knob restarts. */
     const val WRITTEN = 2
+
+    /** Status: the plugin is deleted, and the Knob restarts. */
+    const val DELETED = 3
 
     /** Bytes in front of each piece: its offset in the module, little-endian. */
     const val OFFSET = 4
@@ -48,6 +60,7 @@ object PluginService {
         0x83 -> Res.string.plugins_knob_piece_missing
         0x84 -> Res.string.plugins_knob_other_than_announced
         0x85 -> Res.string.plugins_knob_flash_failed
+        0x86 -> Res.string.plugins_error_delete_refused
         else -> null
     }
 
@@ -56,6 +69,73 @@ object PluginService {
         val end = minOf(offset + piece, module.size)
         return ByteArray(OFFSET) { (offset ushr 8 * it).toByte() } + module.copyOfRange(offset, end)
     }
+
+    /** An entry's bytes: index, count, flags, slot, id, size, version, name and summary. */
+    const val ENTRY_SIZE = 76
+
+    /** The slot of a bundled plugin, which lives in the firmware. */
+    const val BUNDLED_SLOT = 0xff
+
+    /**
+     * The entry the Knob sends for the selected index: the count of all plugins, and the plugin
+     * unless the index is past the end. Throws [BluetoothFailed] for bytes it cannot read.
+     */
+    fun entryOf(bytes: ByteArray): PluginEntry {
+        fun invalid(): Nothing = throw BluetoothFailed(Res.string.bluetooth_error_plugin_entry)
+        fun byte(at: Int) = bytes[at].toInt() and 0xff
+        fun number(at: Int, length: Int) = unsignedOf(bytes.copyOfRange(at, at + length))
+        fun text(at: Int, max: Int): String {
+            val length = byte(at).takeIf { it <= max } ?: invalid()
+            return try {
+                bytes.copyOfRange(at + 1, at + 1 + length).decodeToString(throwOnInvalidSequence = true)
+            } catch (_: CharacterCodingException) {
+                invalid()
+            }
+        }
+        if (bytes.size < 2) invalid()
+        val index = byte(0)
+        val count = byte(1)
+        if (index >= count) return PluginEntry(index, count, null)
+        if (bytes.size < ENTRY_SIZE) invalid()
+        val flags = byte(2)
+        val plugin = KnobPlugin(
+            name = text(ENTRY_NAME_AT, NAME_MAX).ifEmpty { invalid() },
+            summary = text(ENTRY_SUMMARY_AT, SUMMARY_MAX),
+            version = listOf(0, 2, 4).joinToString(".") { number(ENTRY_VERSION_AT + it, 2).toString() },
+            id = hexOf(bytes.copyOfRange(4, 4 + ID_LEN)),
+            size = number(ENTRY_SIZE_AT, 4),
+            slot = byte(3).takeIf { it != BUNDLED_SLOT },
+            bundled = flags and 1 != 0,
+            installed = flags and 2 != 0,
+        )
+        return PluginEntry(index, count, plugin)
+    }
+
+    private const val ENTRY_SIZE_AT = 12
+    private const val ENTRY_VERSION_AT = 16
+    private const val ENTRY_NAME_AT = 22
+    private const val ENTRY_SUMMARY_AT = ENTRY_NAME_AT + 1 + NAME_MAX
+}
+
+/** One entry the Knob sends: its [index] of [count], and the [plugin] there, null past the end. */
+class PluginEntry(val index: Int, val count: Int, val plugin: KnobPlugin?)
+
+/**
+ * A plugin on the Knob: bundled with the firmware, or in a flash [slot] from which it can be
+ * deleted; [installed] once accepted on the Knob.
+ */
+data class KnobPlugin(
+    val name: String,
+    val summary: String,
+    val version: String,
+    /** Eight bytes that name the plugin on the Knob, in hex. */
+    val id: String,
+    val size: Long,
+    val slot: Int?,
+    val bundled: Boolean,
+    val installed: Boolean,
+) {
+    val deletable: Boolean get() = !bundled && slot != null
 }
 
 class PluginInvalid(override val shown: Message, cause: Throwable? = null) :

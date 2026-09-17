@@ -4,6 +4,9 @@ import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PluginsTest {
     /** The HID remote from the Knob's firmware 0.1.0, as the catalogue lists it; its header is teetotum-pack's. */
@@ -95,5 +98,76 @@ class PluginsTest {
         assertEquals(listOf("Teetotum"), catalogue.plugins.map { it.name })
         assertFailsWith<PluginInvalid> { catalogueOf("""{"format": 2, "plugins": []}""") }
         assertFailsWith<PluginInvalid> { catalogueOf("not json") }
+    }
+
+    /** An entry as the firmware lays it out, written here byte by byte rather than with the parser's offsets. */
+    private fun entryBytes(index: Int, count: Int, flags: Int, slot: Int, name: String, summary: String): ByteArray {
+        val bytes = mutableListOf(index, count, flags, slot)
+        bytes += listOf(0x41, 0xa9, 0xad, 0x2d, 0x22, 0x90, 0x78, 0x8d)
+        bytes += listOf(0x65, 0x05, 0, 0)
+        bytes += listOf(1, 0, 2, 0, 0x2c, 0x01)
+        bytes += name.length
+        bytes += name.encodeToByteArray().map { it.toInt() }.plus(List(20 - name.length) { 0 })
+        bytes += summary.length
+        bytes += summary.encodeToByteArray().map { it.toInt() }.plus(List(32 - summary.length) { 0 })
+        return ByteArray(bytes.size) { bytes[it].toByte() }
+    }
+
+    @Test
+    fun readsAPluginInASlot() {
+        val bytes = entryBytes(1, 3, 0b10, 2, "HID remote", "remote for the phone's player")
+        assertEquals(PluginService.ENTRY_SIZE, bytes.size)
+        val entry = PluginService.entryOf(bytes)
+        assertEquals(1, entry.index)
+        assertEquals(3, entry.count)
+        assertEquals(
+            KnobPlugin(
+                name = "HID remote",
+                summary = "remote for the phone's player",
+                version = "1.2.300",
+                id = "41a9ad2d2290788d",
+                size = 1381,
+                slot = 2,
+                bundled = false,
+                installed = true,
+            ),
+            entry.plugin,
+        )
+        assertTrue(entry.plugin?.deletable == true)
+    }
+
+    @Test
+    fun aBundledPluginHasNoSlotToDelete() {
+        val plugin = PluginService.entryOf(entryBytes(0, 1, 0b01, 0xff, "Teetotum", "")).plugin
+        assertEquals("", plugin?.summary)
+        assertNull(plugin?.slot)
+        assertTrue(plugin?.bundled == true)
+        assertFalse(plugin?.installed == true)
+        assertFalse(plugin?.deletable == true)
+    }
+
+    @Test
+    fun anIndexPastTheEndCarriesOnlyTheCount() {
+        val entry = PluginService.entryOf(ByteArray(PluginService.ENTRY_SIZE) { if (it < 2) 4 else 0 })
+        assertEquals(4, entry.count)
+        assertNull(entry.plugin)
+        assertEquals(0, PluginService.entryOf(byteArrayOf(0, 0)).count)
+    }
+
+    @Test
+    fun refusesAnEntryItCannotRead() {
+        val good = entryBytes(0, 1, 0, 0, "HID remote", "remote")
+        assertFailsWith<BluetoothFailed> { PluginService.entryOf(byteArrayOf()) }
+        assertFailsWith<BluetoothFailed> { PluginService.entryOf(good.copyOf(40)) }
+        assertFailsWith<BluetoothFailed> { PluginService.entryOf(good.copyOf().also { it[22] = 21 }) }
+        assertFailsWith<BluetoothFailed> { PluginService.entryOf(good.copyOf().also { it[22] = 0 }) }
+        assertFailsWith<BluetoothFailed> { PluginService.entryOf(good.copyOf().also { it[23] = 0xff.toByte() }) }
+    }
+
+    @Test
+    fun namesWhyTheKnobRefused() {
+        assertEquals(Res.string.plugins_error_delete_refused, PluginService.failure(0x86))
+        assertEquals(Res.string.plugins_knob_slots_full, PluginService.failure(0x81))
+        assertNull(PluginService.failure(PluginService.DELETED))
     }
 }

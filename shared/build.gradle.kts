@@ -38,7 +38,8 @@ kotlin {
         namespace = "io.github.teetotum_rs.app.shared"
         compileSdk = libs.versions.compile.sdk.get().toInt()
         minSdk = libs.versions.min.sdk.get().toInt()
-        withHostTest {}
+        // Robolectric runs the Compose UI tests on the host and needs the merged resources and manifest.
+        withHostTest { isIncludeAndroidResources = true }
         // Compose resources reach the APK as Android assets.
         androidResources { enable = true }
     }
@@ -64,6 +65,11 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+        }
+        getByName("androidHostTest").dependencies {
+            implementation(libs.compose.ui.test)
+            implementation(libs.androidx.compose.ui.test.manifest)
+            implementation(libs.robolectric)
         }
     }
 }

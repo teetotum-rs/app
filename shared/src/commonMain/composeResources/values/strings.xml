@@ -160,6 +160,9 @@
     <string name="bluetooth_error_refused_begin">The Knob refused. Open Settings &gt; Receive on the Knob and try again.</string>
     <string name="bluetooth_error_refused_piece">The Knob refused a piece of the plugin.</string>
     <string name="bluetooth_error_refused_plugin">The Knob refused the plugin.</string>
+    <string name="bluetooth_error_no_plugin_list">This Knob does not list its plugins over Bluetooth. Update its firmware.</string>
+    <string name="bluetooth_error_refused_delete">The Knob refused to delete the plugin.</string>
+    <string name="bluetooth_error_plugin_entry">The Knob sent a plugin entry this app cannot read.</string>
 
     <!-- Plugins over Bluetooth -->
     <string name="plugins_intro">Open Settings &gt; Receive on the Knob, then send a plugin. The Knob restarts and asks you to install it.</string>
@@ -174,6 +177,21 @@
     <string name="plugins_sent">Sent. The Knob restarts and asks you to install it.</string>
     <string name="plugins_facts">Version %1$s · %2$s · uses %3$s</string>
     <string name="plugins_uses_nothing">nothing</string>
+
+    <!-- Plugins over Bluetooth: the plugins on the Knob -->
+    <string name="plugins_on_knob">On the Knob</string>
+    <string name="plugins_on_knob_looking">Reading the plugins on the Knob…</string>
+    <string name="plugins_on_knob_none">No plugins on the Knob.</string>
+    <string name="plugins_on_knob_read">Read again</string>
+    <string name="plugins_on_knob_facts">Version %1$s · %2$s · %3$s</string>
+    <string name="plugins_state_bundled">built in</string>
+    <string name="plugins_state_installed">installed</string>
+    <string name="plugins_state_waiting">not installed yet</string>
+    <string name="plugins_delete">Delete</string>
+    <string name="plugins_delete_title">Delete %1$s?</string>
+    <string name="plugins_delete_text">Open Settings &gt; Receive on the Knob first. The Knob deletes the plugin and restarts.</string>
+    <string name="plugins_deleted">Deleted. The Knob restarts.</string>
+    <string name="plugins_error_delete_refused">The Knob refused to delete. Open Settings &gt; Receive on the Knob and try again.</string>
 
     <!-- Plugins over Bluetooth: the catalogue and downloads -->
     <string name="plugins_error_catalogue_http">The catalogue could not be read: HTTP %1$d.</string>

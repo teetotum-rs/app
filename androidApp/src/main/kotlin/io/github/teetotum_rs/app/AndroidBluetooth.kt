@@ -88,6 +88,42 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         }
     }
 
+    override suspend fun plugins(): List<KnobPlugin> = session {
+        requestMtu(MTU)
+        val service = service(PluginService.SERVICE)
+            ?: throw BluetoothFailed(Res.string.bluetooth_error_no_plugin_list)
+        val select = service.characteristic(PluginService.SELECT)
+        val entry = service.characteristic(PluginService.ENTRY)
+        if (select == null || entry == null) throw BluetoothFailed(Res.string.bluetooth_error_no_plugin_list)
+        buildList {
+            var index = 0
+            do {
+                if (!write(select, byteArrayOf(index.toByte()))) throw BluetoothFailed(Res.string.bluetooth_error_write)
+                val read = PluginService.entryOf(read(entry))
+                if (read.index != index) throw BluetoothFailed(Res.string.bluetooth_error_plugin_entry)
+                read.plugin?.let(::add)
+                index++
+            } while (index < read.count)
+        }
+    }
+
+    override suspend fun deletePlugin(slot: Int) = session {
+        val service = service(PluginService.SERVICE)
+            ?: throw BluetoothFailed(Res.string.bluetooth_error_no_plugins)
+        val control = service.characteristic(PluginService.CONTROL)
+        val status = service.characteristic(PluginService.STATUS)
+        if (control == null || status == null) throw BluetoothFailed(Res.string.bluetooth_error_no_plugins)
+        subscribe(status)
+        when (writeStatus(control, byteArrayOf(PluginService.DELETE, slot.toByte()))) {
+            BluetoothGatt.GATT_SUCCESS -> awaitStatus(PluginService.DELETED)
+
+            // The Knob takes commands only while its Receive is open.
+            BluetoothGatt.GATT_WRITE_NOT_PERMITTED -> throw BluetoothFailed(Res.string.plugins_error_delete_refused)
+
+            else -> throw BluetoothFailed(Res.string.bluetooth_error_refused_delete)
+        }
+    }
+
     /** Finds the Knob, connects, runs [block] and disconnects. */
     private suspend fun <T> session(block: suspend Session.() -> T): T {
         val adapter = adapter ?: throw BluetoothFailed(Res.string.bluetooth_error_no_adapter)
@@ -186,11 +222,11 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
                 characteristic: BluetoothGattCharacteristic,
                 status: Int,
             ) {
-                events.trySend(Event.Written(status == BluetoothGatt.GATT_SUCCESS))
+                events.trySend(Event.Written(status))
             }
 
             override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
-                events.trySend(Event.Written(status == BluetoothGatt.GATT_SUCCESS))
+                events.trySend(Event.Written(status))
             }
 
             override fun onCharacteristicChanged(
@@ -234,7 +270,11 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         }
 
         /** Writes [value] and waits for the Knob to take it; false when it refuses. */
-        suspend fun write(characteristic: BluetoothGattCharacteristic, value: ByteArray): Boolean {
+        suspend fun write(characteristic: BluetoothGattCharacteristic, value: ByteArray): Boolean =
+            writeStatus(characteristic, value) == BluetoothGatt.GATT_SUCCESS
+
+        /** Writes [value] and waits for the Knob's answer, a `BluetoothGatt` status. */
+        suspend fun writeStatus(characteristic: BluetoothGattCharacteristic, value: ByteArray): Int {
             val started = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 gatt.writeCharacteristic(characteristic, value, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ==
                     BluetoothStatusCodes.SUCCESS
@@ -247,7 +287,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
                 }
             }
             if (!started) throw BluetoothFailed(Res.string.bluetooth_error_write)
-            return expect<Event.Written>().ok
+            return expect<Event.Written>().status
         }
 
         /** The MTU the Knob agrees to, at most [mtu]. */
@@ -299,7 +339,9 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         data object Disconnected : Event
         data class Discovered(val ok: Boolean) : Event
         data class Mtu(val mtu: Int) : Event
-        data class Written(val ok: Boolean) : Event
+        data class Written(val status: Int) : Event {
+            val ok get() = status == BluetoothGatt.GATT_SUCCESS
+        }
         class Read(val value: ByteArray?) : Event
     }
 
