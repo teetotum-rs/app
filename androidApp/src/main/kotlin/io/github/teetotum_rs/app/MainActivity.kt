@@ -19,10 +19,20 @@ class MainActivity : ComponentActivity() {
     private lateinit var radio: AndroidRadio
     private var shared by mutableStateOf<Shared?>(null)
     private val settings by lazy { getSharedPreferences("settings", MODE_PRIVATE) }
-    private var theme by mutableStateOf(Theme.System)
+    private var preferences by mutableStateOf(Preferences())
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        theme = Theme.entries.find { it.name == settings.getString(THEME, null) } ?: Theme.System
+        preferences = Preferences(
+            theme = Theme.entries.find { it.name == settings.getString(THEME, null) } ?: Theme.System,
+            start = Start.entries.find { it.name == settings.getString(START, null) } ?: Start.Home,
+            catalogue = CatalogueLoad.entries.find {
+                it.name == settings.getString(
+                    CATALOGUE,
+                    null,
+                )
+            } ?: CatalogueLoad.Tap,
+            lastPage = Page.entries.find { it.name == settings.getString(LAST_PAGE, null) } ?: Page.Home,
+        )
         edgeToEdge()
         super.onCreate(savedInstanceState)
         radio = AndroidRadio(applicationContext)
@@ -42,10 +52,15 @@ class MainActivity : ComponentActivity() {
                 onShareEnd = { shared = null },
                 onExit = { finish() },
                 libraries = { resources.openRawResource(R.raw.aboutlibraries).bufferedReader().use { it.readText() } },
-                theme = theme,
-                onTheme = {
-                    theme = it
-                    settings.edit { putString(THEME, it.name) }
+                preferences = preferences,
+                onPreferences = {
+                    preferences = it
+                    settings.edit {
+                        putString(THEME, it.theme.name)
+                        putString(START, it.start.name)
+                        putString(CATALOGUE, it.catalogue.name)
+                        putString(LAST_PAGE, it.lastPage.name)
+                    }
                 },
             ) { onCode -> Scanner(onCode) }
         }
@@ -87,5 +102,8 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val THEME = "theme"
+        const val START = "start"
+        const val CATALOGUE = "catalogue"
+        const val LAST_PAGE = "last_page"
     }
 }

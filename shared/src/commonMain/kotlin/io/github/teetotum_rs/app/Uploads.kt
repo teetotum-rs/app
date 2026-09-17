@@ -1,5 +1,8 @@
 package io.github.teetotum_rs.app
 
+import kotlinx.io.IOException
+import org.jetbrains.compose.resources.StringResource
+
 /** A file the user picked to send to the Knob. */
 class Pick(
     val name: String,
@@ -25,3 +28,10 @@ expect fun dateTimeText(millis: Long): String
 
 /** Files another app shared with this one; [skipped] counts those that could not be sent. */
 class Shared(val picks: List<Pick>, val skipped: Int)
+
+/** A file on the phone that could not be read or written, with the line the user sees. */
+class FileFailed(override val shown: Message) :
+    IOException(shown.toString()),
+    Shown {
+    constructor(resource: StringResource, vararg args: Any) : this(messageOf(resource, *args))
+}

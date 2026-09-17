@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import org.jetbrains.compose.resources.stringResource
 
 /** Shows [content] once the app may search for and connect to the Knob; asks first. */
 @Composable
@@ -43,7 +44,7 @@ fun BluetoothAccess(content: @Composable () -> Unit) {
     } else {
         LaunchedEffect(Unit) { ask.launch(needed) }
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            ActionButton("Allow Bluetooth", onClick = { ask.launch(needed) })
+            ActionButton(stringResource(Res.string.bluetooth_allow), onClick = { ask.launch(needed) })
         }
     }
 }

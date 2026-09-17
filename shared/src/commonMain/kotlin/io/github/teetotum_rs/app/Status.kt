@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The Knob's status over [bluetooth], read when the page opens and again on request, with the phone's time
@@ -31,8 +32,13 @@ fun StatusPage(bluetooth: Bluetooth, access: @Composable (content: @Composable (
         }
         val current = result
         when {
-            current == null -> Waiting("Looking for the Knob")
-            current.isFailure -> Failed(current.exceptionOrNull()?.message.orEmpty(), "Try again") { attempt++ }
+            current == null -> Waiting(stringResource(Res.string.status_looking))
+
+            current.isFailure -> Failed(
+                current.exceptionOrNull()?.toMessage()?.text().orEmpty(),
+                stringResource(Res.string.common_try_again),
+            ) { attempt++ }
+
             else -> StatusCards(current.getOrThrow(), readAt) { attempt++ }
         }
     }
@@ -41,12 +47,20 @@ fun StatusPage(bluetooth: Bluetooth, access: @Composable (content: @Composable (
 @Composable
 private fun StatusCards(status: KnobStatus, readAt: Long, onRead: () -> Unit) {
     CardColumn {
-        PageCard(ReleaseIcon, "Firmware") { StatusValue(firmwareText(status.version)) }
-        PageCard(CardIcon, "Card") { StatusValue(cardText(status.cardBytes)) }
-        PageCard(TimerIcon, "Running for") { StatusValue(uptimeText(status.uptimeSeconds)) }
-        PageCard(WifiIcon, "Wi-Fi networks nearby") { StatusValue(status.networks.toString()) }
-        PageCard(ScheduleIcon, "Read at") { StatusValue(dateTimeText(readAt)) }
-        ActionButton("Read again", onClick = onRead)
+        PageCard(Res.drawable.new_releases, stringResource(Res.string.status_firmware)) {
+            StatusValue(firmwareText(status.version).text())
+        }
+        PageCard(Res.drawable.sd_card, stringResource(Res.string.status_card)) {
+            StatusValue(cardText(status.cardBytes).text())
+        }
+        PageCard(Res.drawable.timer, stringResource(Res.string.status_running)) {
+            StatusValue(uptimeText(status.uptimeSeconds))
+        }
+        PageCard(Res.drawable.wifi, stringResource(Res.string.status_networks)) {
+            StatusValue(status.networks.toString())
+        }
+        PageCard(Res.drawable.schedule, stringResource(Res.string.status_read_at)) { StatusValue(dateTimeText(readAt)) }
+        ActionButton(stringResource(Res.string.status_read_again), onClick = onRead)
     }
 }
 

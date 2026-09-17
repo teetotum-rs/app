@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Environment
 import android.provider.MediaStore
 import android.webkit.MimeTypeMap
-import java.io.IOException
 
 /** Files land in `Download/TeeToTum`, through the media store, which needs no permission. */
 class AndroidDownloads(context: Context) : Downloads {
@@ -21,8 +20,8 @@ class AndroidDownloads(context: Context) : Downloads {
                 ?.let { put(MediaStore.Downloads.MIME_TYPE, it) }
         }
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            ?: throw IOException("Could not create $name in Downloads.")
-        val out = resolver.openOutputStream(uri) ?: throw IOException("Could not write $name.")
+            ?: throw FileFailed(Res.string.file_error_create, name)
+        val out = resolver.openOutputStream(uri) ?: throw FileFailed(Res.string.file_error_write, name)
 
         return object : FileSink {
             override fun write(bytes: ByteArray, count: Int) = out.write(bytes, 0, count)

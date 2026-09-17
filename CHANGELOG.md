@@ -17,12 +17,14 @@ All notable changes to the app are listed here. The format follows
 - Corner marks on the camera frame show how large the code should appear.
 - A monochrome launcher icon, for phones set to themed icons.
 - Plugins over Bluetooth sends a plugin from the catalogue, or a signed `.wasm` file of your own, to the Knob.
+- Settings choose the start page, Home or the page last open, and whether the plugin catalogue is read from GitHub only on tap, as by default, or as soon as the page opens.
 
 ### Changed
 
 - The back gesture leads to the page above: About from the pages under it, Home from any other.
 - Settings is the last page in the menu, just above Exit.
 - Help, imprint, privacy and changelog show a card with an icon for each section.
+- Help lists its cards in the order of the menu.
 
 ### Fixed
 

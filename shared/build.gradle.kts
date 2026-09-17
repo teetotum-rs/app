@@ -39,6 +39,8 @@ kotlin {
         compileSdk = libs.versions.compile.sdk.get().toInt()
         minSdk = libs.versions.min.sdk.get().toInt()
         withHostTest {}
+        // Compose resources reach the APK as Android assets.
+        androidResources { enable = true }
     }
 
     sourceSets {
@@ -50,6 +52,7 @@ kotlin {
             api(libs.compose.foundation)
             api(libs.compose.ui)
             api(libs.compose.material3)
+            api(libs.compose.components.resources)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.ktor.client.core)
@@ -63,4 +66,10 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
         }
     }
+}
+
+compose.resources {
+    packageOfResClass = "io.github.teetotum_rs.app"
+    // The app module shows these strings too.
+    publicResClass = true
 }

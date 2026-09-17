@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared by several screens -->
+    <string name="app_name">TeeToTum</string>
+    <string name="common_ok">OK</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_try_again">Try again</string>
+    <string name="common_name_value">%1$s: %2$s</string>
+
+    <!-- Top bar and menu -->
+    <string name="menu_open">Open menu</string>
+    <string name="menu_close">Close menu</string>
+    <string name="menu_open_settings">Open settings</string>
+    <string name="menu_hide_group">Hide pages under %1$s</string>
+    <string name="menu_show_group">Show pages under %1$s</string>
+    <string name="menu_exit">Exit</string>
+
+    <!-- Page titles -->
+    <string name="page_home">Home</string>
+    <string name="page_card">Card over Wi-Fi</string>
+    <string name="page_status">Status over Bluetooth</string>
+    <string name="page_plugins">Plugins over Bluetooth</string>
+    <string name="page_about">About</string>
+    <string name="page_help">Help</string>
+    <string name="page_imprint">Imprint</string>
+    <string name="page_privacy">Privacy</string>
+    <string name="page_changelog">Changelog</string>
+    <string name="page_libraries">Libraries</string>
+    <string name="page_settings">Settings</string>
+
+    <!-- The line on each page's card on Home and About -->
+    <string name="page_card_detail">Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.</string>
+    <string name="page_status_detail">See over Bluetooth the Knob's firmware, card, how long it has run and how many Wi-Fi networks it sees.</string>
+    <string name="page_plugins_detail">Send plugins to the Knob over Bluetooth, from the catalogue or your own.</string>
+    <string name="page_help_detail">How to use the app, page by page.</string>
+    <string name="page_imprint_detail">Who makes the app, and where its code and the Knob's live.</string>
+    <string name="page_privacy_detail">What the app does with your data.</string>
+    <string name="page_changelog_detail">What changed in each version.</string>
+    <string name="page_libraries_detail">The open-source libraries the app is built on, with their licences.</string>
+
+    <!-- Card over Wi-Fi: scanning and joining -->
+    <string name="card_scan_intro">Open Card over Wi-Fi on the Knob, then scan the code on its screen.</string>
+    <plurals name="card_scan_shared">
+        <item quantity="one">%1$d file to send; you choose the folder once the card shows.</item>
+        <item quantity="other">%1$d files to send; you choose the folder once the card shows.</item>
+    </plurals>
+    <string name="card_scan_code">Scan code</string>
+    <string name="card_scan_again">Scan again</string>
+    <string name="card_close_camera">Close camera</string>
+    <string name="card_joining">Joining %1$s</string>
+    <string name="card_allow_camera">Allow the camera</string>
+
+    <!-- Card over Wi-Fi: the folder -->
+    <string name="card_up">Up</string>
+    <string name="card_new_folder">New folder</string>
+    <string name="card_upload">Upload files</string>
+    <plurals name="card_footer">
+        <item quantity="one">TeeToTum %1$s · %2$d entry · hold an entry to delete it</item>
+        <item quantity="other">TeeToTum %1$s · %2$d entries · hold an entry to delete it</item>
+    </plurals>
+
+    <!-- Card over Wi-Fi: files shared from another app -->
+    <string name="card_share_empty">The share holds no file to send.</string>
+    <plurals name="card_share_send">
+        <item quantity="one">Send %1$d file into this folder?</item>
+        <item quantity="other">Send %1$d files into this folder?</item>
+    </plurals>
+    <plurals name="card_share_skipped">
+        <item quantity="one">%1$d file could not be read.</item>
+        <item quantity="other">%1$d files could not be read.</item>
+    </plurals>
+    <string name="card_send_here">Send here</string>
+
+    <!-- Card over Wi-Fi: questions before a change -->
+    <string name="card_delete_title">Delete %1$s?</string>
+    <string name="card_delete_folder">Only an empty folder can be deleted.</string>
+    <string name="card_delete_file">The file is removed from the card.</string>
+    <string name="card_delete">Delete</string>
+    <plurals name="card_replace_title">
+        <item quantity="one">Replace %1$d file?</item>
+        <item quantity="other">Replace %1$d files?</item>
+    </plurals>
+    <string name="card_replace">Replace</string>
+    <string name="card_make">Make</string>
+    <string name="card_folder_name">Name</string>
+
+    <!-- Card over Wi-Fi: downloads, uploads and changes -->
+    <plurals name="card_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <string name="card_progress">%1$s: %2$s of %3$s</string>
+    <string name="card_saved_to">Saved to %1$s</string>
+    <string name="card_sent">Sent</string>
+    <string name="card_deleted">Deleted</string>
+    <string name="card_made">Made</string>
+
+    <!-- Card over Wi-Fi: failures -->
+    <string name="card_error_join">Could not join %1$s.</string>
+    <string name="card_error_answered">The Knob answered %1$d for %2$s.</string>
+    <string name="card_error_firmware">The Knob needs firmware %1$s or later.</string>
+    <string name="card_error_stopped">The download of %1$s stopped after %2$d of %3$d bytes.</string>
+    <string name="card_error_changed">%1$s changed while it was sent.</string>
+    <string name="card_error_refused">%1$s: the Knob answered %2$d</string>
+
+    <!-- Files on the phone -->
+    <string name="file_error_create">Could not create %1$s in Downloads.</string>
+    <string name="file_error_write">Could not write %1$s.</string>
+    <string name="file_error_read">Could not read %1$s.</string>
+
+    <!-- Settings -->
+    <string name="settings_general">General</string>
+    <string name="settings_start">Start page</string>
+    <string name="settings_start_home">Home</string>
+    <string name="settings_start_home_detail">Open on Home, with a card for each feature</string>
+    <string name="settings_start_last">Last page</string>
+    <string name="settings_start_last_detail">Open on the page you left, apart from Settings</string>
+    <string name="settings_catalogue">Plugin catalogue</string>
+    <string name="settings_catalogue_open">When the page opens</string>
+    <string name="settings_catalogue_open_detail">Read the catalogue from GitHub as soon as Plugins over Bluetooth opens</string>
+    <string name="settings_catalogue_tap">Only on tap</string>
+    <string name="settings_catalogue_tap_detail">Read it only after you tap Load catalogue</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">Follow system</string>
+    <string name="settings_theme_system_detail">Light or dark, as the phone is set</string>
+    <string name="settings_theme_github">GitHub</string>
+    <string name="settings_theme_github_detail">GitHub Light or Dark Default, as the phone is set</string>
+    <string name="settings_theme_red">Red</string>
+    <string name="settings_theme_red_detail">The knob's red theme, light or dark as the phone is set</string>
+
+    <!-- Status over Bluetooth -->
+    <string name="status_looking">Looking for the Knob</string>
+    <string name="status_firmware">Firmware</string>
+    <string name="status_card">Card</string>
+    <string name="status_running">Running for</string>
+    <string name="status_networks">Wi-Fi networks nearby</string>
+    <string name="status_read_at">Read at</string>
+    <string name="status_read_again">Read again</string>
+    <string name="status_firmware_unknown">Older than 0.3.4, the first firmware to report its version here.</string>
+    <string name="status_card_unknown">Needs firmware 0.3.4 or later.</string>
+    <string name="status_no_card">No card in the Knob.</string>
+
+    <!-- Bluetooth: access and failures -->
+    <string name="bluetooth_allow">Allow Bluetooth</string>
+    <string name="bluetooth_error_no_adapter">This phone has no Bluetooth.</string>
+    <string name="bluetooth_error_off">Bluetooth is off. Turn it on and try again.</string>
+    <string name="bluetooth_error_search">Could not search for the Knob (%1$d).</string>
+    <string name="bluetooth_error_out_of_range">No Knob in range.</string>
+    <string name="bluetooth_error_connect">Could not connect to the Knob.</string>
+    <string name="bluetooth_error_services">The Knob did not list its services.</string>
+    <string name="bluetooth_error_silent">The Knob did not answer.</string>
+    <string name="bluetooth_error_disconnected">The Knob ended the connection.</string>
+    <string name="bluetooth_error_out_of_turn">The Knob answered out of turn.</string>
+    <string name="bluetooth_error_read">Could not read from the Knob.</string>
+    <string name="bluetooth_error_write">Could not write to the Knob.</string>
+    <string name="bluetooth_error_no_status">This Knob does not report its status.</string>
+    <string name="bluetooth_error_no_plugins">This Knob takes no plugins over Bluetooth. Update its firmware.</string>
+    <string name="bluetooth_error_no_progress">The Knob does not report how the upload goes.</string>
+    <string name="bluetooth_error_refused_begin">The Knob refused. Open Settings &gt; Receive on the Knob and try again.</string>
+    <string name="bluetooth_error_refused_piece">The Knob refused a piece of the plugin.</string>
+    <string name="bluetooth_error_refused_plugin">The Knob refused the plugin.</string>
+
+    <!-- Plugins over Bluetooth -->
+    <string name="plugins_intro">Open Settings &gt; Receive on the Knob, then send a plugin. The Knob restarts and asks you to install it.</string>
+    <string name="plugins_send">Send to Knob</string>
+    <string name="plugins_own">Your own plugin</string>
+    <string name="plugins_own_hint">A plugin you built and signed yourself, as a .wasm file.</string>
+    <string name="plugins_choose">Choose file</string>
+    <string name="plugins_catalogue">Catalogue</string>
+    <string name="plugins_catalogue_hint">The plugins published for the Knob, read from GitHub.</string>
+    <string name="plugins_catalogue_load">Load catalogue</string>
+    <string name="plugins_progress">%1$s of %2$s</string>
+    <string name="plugins_sent">Sent. The Knob restarts and asks you to install it.</string>
+    <string name="plugins_facts">Version %1$s · %2$s · uses %3$s</string>
+    <string name="plugins_uses_nothing">nothing</string>
+
+    <!-- Plugins over Bluetooth: the catalogue and downloads -->
+    <string name="plugins_error_catalogue_http">The catalogue could not be read: HTTP %1$d.</string>
+    <string name="plugins_error_catalogue_offline">The catalogue could not be read. Is the phone online?</string>
+    <string name="plugins_error_catalogue_invalid">The catalogue could not be read: %1$s</string>
+    <string name="plugins_error_catalogue_format">Catalogue format %1$d; this app reads 1.</string>
+    <string name="plugins_error_download_http">The download failed: HTTP %1$d.</string>
+    <string name="plugins_error_download_offline">The plugin could not be downloaded. Is the phone online? (%1$s)</string>
+    <string name="plugins_error_download_mismatch">The download does not match the catalogue.</string>
+    <string name="plugins_error_download_other_id">The plugin names another id or key than the catalogue.</string>
+
+    <!-- Plugins over Bluetooth: checking a module -->
+    <string name="plugins_error_too_long">Longer than %1$d bytes.</string>
+    <string name="plugins_error_not_wasm">Not a WebAssembly module.</string>
+    <string name="plugins_error_not_plugin">No TeeToTum plugin.</string>
+    <string name="plugins_error_unsigned">The plugin is not signed.</string>
+    <string name="plugins_error_signature">The plugin's signature is malformed.</string>
+    <string name="plugins_error_manifest">The plugin's manifest is malformed.</string>
+    <string name="plugins_error_manifest_format">Manifest format %1$s, not %2$d.</string>
+
+    <!-- Plugins over Bluetooth: why the Knob refused, by its status code -->
+    <string name="plugins_knob_slots_full">Every plugin slot on the Knob is taken.</string>
+    <string name="plugins_knob_no_upload">The Knob took it for no upload.</string>
+    <string name="plugins_knob_piece_missing">A piece went missing on the way.</string>
+    <string name="plugins_knob_other_than_announced">The plugin arrived other than announced.</string>
+    <string name="plugins_knob_flash_failed">The Knob's flash failed.</string>
+</resources>

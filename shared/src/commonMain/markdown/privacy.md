@@ -18,9 +18,10 @@ because a Bluetooth search could reveal a location.
 ## Plugins
 
 To list the plugin catalogue and download a plugin from it, the app fetches files from GitHub
-(`raw.githubusercontent.com`), and only while **Plugins over Bluetooth** is open. Like any website,
-GitHub sees the phone's IP address; the app sends nothing else. A plugin you choose from the phone
-goes only to the Knob.
+(`raw.githubusercontent.com`), and only while **Plugins over Bluetooth** is open. Unless **Plugin
+catalogue** in the settings says otherwise, nothing is fetched until you tap **Load catalogue**.
+Like any website, GitHub sees the phone's IP address; the app sends nothing else. A plugin you
+choose from the phone goes only to the Knob.
 
 ## Files
 

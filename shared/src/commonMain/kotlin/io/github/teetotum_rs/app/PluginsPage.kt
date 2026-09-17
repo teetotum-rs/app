@@ -25,31 +25,32 @@ import io.ktor.client.statement.readRawBytes
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.launch
 import kotlinx.io.IOException
+import org.jetbrains.compose.resources.stringResource
 
 /** Where a send stands: bytes sent of all, or how it ended. */
-private class Sending(val sent: Int, val total: Int, val result: String? = null)
+private class Sending(val sent: Int, val total: Int, val result: Message? = null)
 
 /** Your own plugin, picked from the phone: what it says about itself, or why it is none. */
-private class OwnPlugin(val name: String, val wasm: ByteArray?, val about: PluginAbout?, val problem: String?)
+private class OwnPlugin(val name: String, val wasm: ByteArray?, val about: PluginAbout?, val problem: Message?)
 
 private const val OWN = "own"
 
-private const val SENT = "Sent. The Knob restarts and asks you to install it."
-
 /**
  * Plugins to send to the Knob over [bluetooth]: those in the catalogue, and one picked with
- * [picker]; [access] asks for Bluetooth first.
+ * [picker]; [access] asks for Bluetooth first. [load] says whether the catalogue is read on opening or on tap.
  */
 @Composable
 fun PluginsPage(
     bluetooth: Bluetooth,
     access: @Composable (content: @Composable () -> Unit) -> Unit,
     picker: @Composable (onPick: (List<Pick>) -> Unit) -> () -> Unit,
+    load: CatalogueLoad,
 ) {
     access {
         val client = remember { httpClient() }
         val scope = rememberCoroutineScope()
-        var attempt by remember { mutableIntStateOf(0) }
+        // 0 until the catalogue is asked for.
+        var attempt by remember { mutableIntStateOf(if (load == CatalogueLoad.Open) 1 else 0) }
         var catalogue by remember { mutableStateOf<Result<Catalogue>?>(null) }
         var own by remember { mutableStateOf<OwnPlugin?>(null) }
         // The send in progress or last ended, by the plugin's id or OWN.
@@ -57,6 +58,7 @@ fun PluginsPage(
         val busy = sending.let { it != null && it.second.result == null }
 
         LaunchedEffect(attempt) {
+            if (attempt == 0) return@LaunchedEffect
             catalogue = null
             catalogue = loadCatalogue(client)
         }
@@ -76,21 +78,26 @@ fun PluginsPage(
         }
 
         CardColumn {
-            Text(
-                "Open Settings > Receive on the Knob, then send a plugin. " +
-                    "The Knob restarts and asks you to install it.",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            catalogue?.fold(
-                onSuccess = { found ->
-                    for (plugin in found.plugins) {
-                        CataloguePluginCard(plugin, sending?.takeIf { it.first == plugin.id }?.second, busy) {
-                            send(plugin.id) { download(client, plugin) }
+            Text(stringResource(Res.string.plugins_intro), style = MaterialTheme.typography.bodyLarge)
+            if (attempt == 0) {
+                PageCard(Res.drawable.cloud_download, stringResource(Res.string.plugins_catalogue)) {
+                    PluginLine(stringResource(Res.string.plugins_catalogue_hint))
+                    ActionButton(stringResource(Res.string.plugins_catalogue_load), onClick = { attempt++ })
+                }
+            } else {
+                catalogue?.fold(
+                    onSuccess = { found ->
+                        for (plugin in found.plugins) {
+                            CataloguePluginCard(plugin, sending?.takeIf { it.first == plugin.id }?.second, busy) {
+                                send(plugin.id) { download(client, plugin) }
+                            }
                         }
-                    }
-                },
-                onFailure = { Failed(it.message.orEmpty(), "Try again") { attempt++ } },
-            ) ?: CircularProgressIndicator()
+                    },
+                    onFailure = {
+                        Failed(it.toMessage().text(), stringResource(Res.string.common_try_again)) { attempt++ }
+                    },
+                ) ?: CircularProgressIndicator()
+            }
             OwnPluginCard(own, sending?.takeIf { it.first == OWN }?.second, busy, onChoose = pick) { wasm ->
                 send(OWN) { wasm }
             }
@@ -102,19 +109,21 @@ fun PluginsPage(
 private suspend fun loadCatalogue(client: HttpClient): Result<Catalogue> = try {
     val response = client.get(CATALOGUE_URL)
     if (!response.status.isSuccess()) {
-        throw PluginInvalid("The catalogue could not be read: HTTP ${response.status.value}.")
+        throw PluginInvalid(messageOf(Res.string.plugins_error_catalogue_http, response.status.value))
     }
     Result.success(catalogueOf(response.bodyAsText()))
 } catch (e: PluginInvalid) {
     Result.failure(e)
 } catch (e: IOException) {
-    Result.failure(PluginInvalid("The catalogue could not be read. Is the phone online?", e))
+    Result.failure(PluginInvalid(messageOf(Res.string.plugins_error_catalogue_offline), e))
 }
 
 /** The plugin as listed in the catalogue, downloaded and checked against it. */
 private suspend fun download(client: HttpClient, plugin: CataloguePlugin): ByteArray {
     val response = client.get(plugin.url)
-    if (!response.status.isSuccess()) throw PluginInvalid("The download failed: HTTP ${response.status.value}.")
+    if (!response.status.isSuccess()) {
+        throw PluginInvalid(messageOf(Res.string.plugins_error_download_http, response.status.value))
+    }
     return response.readRawBytes().also { checkDownload(plugin, it) }
 }
 
@@ -123,36 +132,39 @@ private suspend fun sendOutcome(
     bluetooth: Bluetooth,
     load: suspend () -> ByteArray,
     progress: (sent: Int, total: Int) -> Unit,
-): String = try {
+): Message = try {
     val wasm = load()
     val header = slotHeader(wasm, describe(wasm))
     progress(0, wasm.size)
     bluetooth.sendPlugin(wasm, header) { progress(it, wasm.size) }
-    SENT
+    messageOf(Res.string.plugins_sent)
 } catch (e: PluginInvalid) {
-    e.message.orEmpty()
+    e.shown
 } catch (e: BluetoothFailed) {
-    e.message.orEmpty()
+    e.shown
 } catch (e: IOException) {
-    "The plugin could not be downloaded. Is the phone online? (${e.message})"
+    messageOf(Res.string.plugins_error_download_offline, e.message.toString())
 }
 
 private fun ownPluginOf(pick: Pick): OwnPlugin = try {
-    if (pick.size > PluginService.MODULE_MAX) throw PluginInvalid("Longer than ${PluginService.MODULE_MAX} bytes.")
+    if (pick.size > PluginService.MODULE_MAX) {
+        throw PluginInvalid(messageOf(Res.string.plugins_error_too_long, PluginService.MODULE_MAX))
+    }
     val wasm = readAll(pick)
     OwnPlugin(pick.name, wasm, describe(wasm), null)
 } catch (e: PluginInvalid) {
-    OwnPlugin(pick.name, null, null, e.message)
+    OwnPlugin(pick.name, null, null, e.shown)
 } catch (e: IOException) {
-    OwnPlugin(pick.name, null, null, e.message ?: "Could not read ${pick.name}.")
+    val problem = (e as? Shown)?.shown ?: e.message?.let(Message::Raw)
+    OwnPlugin(pick.name, null, null, problem ?: messageOf(Res.string.file_error_read, pick.name))
 }
 
 @Composable
 private fun CataloguePluginCard(plugin: CataloguePlugin, sending: Sending?, busy: Boolean, onSend: () -> Unit) {
-    PageCard(PluginIcon, plugin.name) {
+    PageCard(Res.drawable.extension, plugin.name) {
         PluginText(null, plugin.summary, pluginFacts(plugin.version, plugin.size, plugin.rights))
         SendLine(sending)
-        ActionButton("Send to Knob", onClick = onSend, enabled = !busy)
+        ActionButton(stringResource(Res.string.plugins_send), onClick = onSend, enabled = !busy)
     }
 }
 
@@ -164,17 +176,28 @@ private fun OwnPluginCard(
     onChoose: () -> Unit,
     onSend: (ByteArray) -> Unit,
 ) {
-    PageCard(FolderIcon, "Your own plugin") {
+    PageCard(Res.drawable.folder, stringResource(Res.string.plugins_own)) {
         when {
-            own == null -> PluginLine("A plugin you built and signed yourself, as a .wasm file.")
-            own.about == null -> PluginLine("${own.name}: ${own.problem}")
+            own == null -> PluginLine(stringResource(Res.string.plugins_own_hint))
+
+            own.about == null -> {
+                PluginLine(stringResource(Res.string.common_name_value, own.name, own.problem?.text().orEmpty()))
+            }
+
             else -> with(own.about) { PluginText(name, summary, pluginFacts(version, size, rights)) }
         }
         SendLine(sending)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val wasm = own?.wasm
-            ActionButton("Choose file", onClick = onChoose, enabled = !busy, filled = wasm == null)
-            if (wasm != null) ActionButton("Send to Knob", onClick = { onSend(wasm) }, enabled = !busy)
+            ActionButton(
+                stringResource(Res.string.plugins_choose),
+                onClick = onChoose,
+                enabled = !busy,
+                filled = wasm == null,
+            )
+            if (wasm != null) {
+                ActionButton(stringResource(Res.string.plugins_send), onClick = { onSend(wasm) }, enabled = !busy)
+            }
         }
     }
 }
@@ -186,7 +209,7 @@ private fun readAll(pick: Pick): ByteArray = pick.open().use { source ->
     var at = 0
     while (at < bytes.size) {
         val count = source.read(buffer, minOf(buffer.size, bytes.size - at))
-        if (count < 0) throw IOException("Could not read ${pick.name}.")
+        if (count < 0) throw FileFailed(Res.string.file_error_read, pick.name)
         buffer.copyInto(bytes, at, 0, count)
         at += count
     }
@@ -214,12 +237,16 @@ private fun SendLine(sending: Sending?) {
     if (sending == null) return
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (sending.result != null) {
-            Text(sending.result, style = MaterialTheme.typography.bodyMedium)
+            Text(sending.result.text(), style = MaterialTheme.typography.bodyMedium)
         } else if (sending.total == 0) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         } else {
             Text(
-                "${sizeText(sending.sent.toLong())} of ${sizeText(sending.total.toLong())}",
+                stringResource(
+                    Res.string.plugins_progress,
+                    sizeText(sending.sent.toLong()),
+                    sizeText(sending.total.toLong()),
+                ),
                 style = MaterialTheme.typography.bodyMedium,
             )
             LinearProgressIndicator(

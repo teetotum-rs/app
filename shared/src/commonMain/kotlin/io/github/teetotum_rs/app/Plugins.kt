@@ -1,7 +1,10 @@
 package io.github.teetotum_rs.app
 
+import androidx.compose.runtime.Composable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /** The Knob's GATT service that takes a plugin while its Settings > Receive is open. */
 object PluginService {
@@ -39,12 +42,12 @@ object PluginService {
     const val MODULE_MAX = SLOT - HEADER
 
     /** Why the Knob refused, by its status code; null for a code that is no failure. */
-    fun failure(code: Int): String? = when (code) {
-        0x81 -> "Every plugin slot on the Knob is taken."
-        0x82 -> "The Knob took it for no upload."
-        0x83 -> "A piece went missing on the way."
-        0x84 -> "The plugin arrived other than announced."
-        0x85 -> "The Knob's flash failed."
+    fun failure(code: Int): StringResource? = when (code) {
+        0x81 -> Res.string.plugins_knob_slots_full
+        0x82 -> Res.string.plugins_knob_no_upload
+        0x83 -> Res.string.plugins_knob_piece_missing
+        0x84 -> Res.string.plugins_knob_other_than_announced
+        0x85 -> Res.string.plugins_knob_flash_failed
         else -> null
     }
 
@@ -55,7 +58,9 @@ object PluginService {
     }
 }
 
-class PluginInvalid(message: String, cause: Throwable? = null) : Exception(message, cause)
+class PluginInvalid(override val shown: Message, cause: Throwable? = null) :
+    Exception(shown.toString(), cause),
+    Shown
 
 /** What a plugin module says about itself. Its signature is not checked here: the Knob does that before it asks. */
 class PluginAbout(
@@ -95,7 +100,7 @@ private class Section(val name: String, val end: Int, val contents: ByteArray)
 
 /** Every custom section of [wasm], as the Knob's `walk` reads them. */
 private fun customSections(wasm: ByteArray): List<Section> {
-    fun invalid(): Nothing = throw PluginInvalid("Not a WebAssembly module.")
+    fun invalid(): Nothing = throw PluginInvalid(messageOf(Res.string.plugins_error_not_wasm))
 
     fun leb128(at: Int): Pair<Int, Int> {
         var value = 0L
@@ -130,14 +135,16 @@ private fun customSections(wasm: ByteArray): List<Section> {
 
 /** What [wasm] says about itself; throws [PluginInvalid] for anything the Knob would not take. */
 fun describe(wasm: ByteArray): PluginAbout {
-    if (wasm.size > PluginService.MODULE_MAX) throw PluginInvalid("Longer than ${PluginService.MODULE_MAX} bytes.")
+    if (wasm.size > PluginService.MODULE_MAX) {
+        throw PluginInvalid(messageOf(Res.string.plugins_error_too_long, PluginService.MODULE_MAX))
+    }
     val sections = customSections(wasm)
     val manifest = sections.filter { it.name == MANIFEST }.singleOrNull()?.contents
-        ?: throw PluginInvalid("No TeeToTum plugin.")
+        ?: throw PluginInvalid(messageOf(Res.string.plugins_error_not_plugin))
     val signature = sections.filter { it.name == SIGNATURE }.singleOrNull()
-        ?: throw PluginInvalid("The plugin is not signed.")
+        ?: throw PluginInvalid(messageOf(Res.string.plugins_error_unsigned))
     if (signature.end != wasm.size || signature.contents.size != KEY_LEN + SIGNATURE_LEN) {
-        throw PluginInvalid("The plugin's signature is malformed.")
+        throw PluginInvalid(messageOf(Res.string.plugins_error_signature))
     }
     return aboutOf(manifest, signature.contents.copyOf(KEY_LEN), wasm.size)
 }
@@ -149,15 +156,17 @@ private fun aboutOf(manifest: ByteArray, key: ByteArray, size: Int): PluginAbout
     fun text(at: Int, length: Int) = try {
         manifest.copyOfRange(at, at + length).decodeToString(throwOnInvalidSequence = true)
     } catch (e: CharacterCodingException) {
-        throw PluginInvalid("The plugin's manifest is malformed.", e)
+        throw PluginInvalid(messageOf(Res.string.plugins_error_manifest), e)
     }
     if (manifest.isEmpty() || byte(0) != MANIFEST_VERSION || manifest.size < VERSION_AT + 6) {
-        throw PluginInvalid("Manifest format ${manifest.firstOrNull()}, not $MANIFEST_VERSION.")
+        throw PluginInvalid(
+            messageOf(Res.string.plugins_error_manifest_format, manifest.firstOrNull().toString(), MANIFEST_VERSION),
+        )
     }
     val nameLength = byte(5)
     val summaryLength = byte(SUMMARY_AT)
     if (nameLength == 0 || nameLength > NAME_MAX || summaryLength > SUMMARY_MAX) {
-        throw PluginInvalid("The plugin's manifest is malformed.")
+        throw PluginInvalid(messageOf(Res.string.plugins_error_manifest))
     }
     val bits = (1..4).fold(0) { value, i -> value or (byte(i) shl 8 * (i - 1)) }
     val name = text(6, nameLength)
@@ -209,24 +218,32 @@ fun catalogueOf(text: String): Catalogue {
     val catalogue = try {
         json.decodeFromString<Catalogue>(text)
     } catch (e: IllegalArgumentException) {
-        throw PluginInvalid("The catalogue could not be read: ${e.message?.lineSequence()?.first()}", e)
+        val why = e.message?.lineSequence()?.first().orEmpty()
+        throw PluginInvalid(messageOf(Res.string.plugins_error_catalogue_invalid, why), e)
     }
-    if (catalogue.format != 1) throw PluginInvalid("Catalogue format ${catalogue.format}; this app reads 1.")
+    if (catalogue.format != 1) {
+        throw PluginInvalid(messageOf(Res.string.plugins_error_catalogue_format, catalogue.format))
+    }
     return catalogue
 }
 
 /** [wasm] as downloaded for [plugin], described; throws [PluginInvalid] if it is not what the catalogue says. */
 fun checkDownload(plugin: CataloguePlugin, wasm: ByteArray): PluginAbout {
     if (wasm.size != plugin.size || hexOf(digest("SHA-256", wasm)) != plugin.sha256) {
-        throw PluginInvalid("The download does not match the catalogue.")
+        throw PluginInvalid(messageOf(Res.string.plugins_error_download_mismatch))
     }
     val about = describe(wasm)
     if (about.id != plugin.id || about.key != plugin.key) {
-        throw PluginInvalid("The plugin names another id or key than the catalogue.")
+        throw PluginInvalid(messageOf(Res.string.plugins_error_download_other_id))
     }
     return about
 }
 
 /** The facts line under a plugin's summary: version, size and what it may use. */
-fun pluginFacts(version: String, size: Int, rights: List<String>): String =
-    "Version $version · ${sizeText(size.toLong())} · uses ${rights.joinToString(", ").ifEmpty { "nothing" }}"
+@Composable
+fun pluginFacts(version: String, size: Int, rights: List<String>): String = stringResource(
+    Res.string.plugins_facts,
+    version,
+    sizeText(size.toLong()),
+    rights.joinToString(", ").ifEmpty { stringResource(Res.string.plugins_uses_nothing) },
+)

@@ -22,16 +22,44 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+
+/** One choice of a setting, with a line on what it does. */
+interface Choice {
+    val title: StringResource
+    val detail: StringResource
+}
 
 /** The app's colours. */
-enum class Theme(val title: String, val detail: String) {
-    System("Follow system", "Light or dark, as the phone is set"),
-    GitHub("GitHub", "GitHub Light or Dark Default, as the phone is set"),
-    Red("Red", "The knob's red theme, light or dark as the phone is set"),
+enum class Theme(override val title: StringResource, override val detail: StringResource) : Choice {
+    System(Res.string.settings_theme_system, Res.string.settings_theme_system_detail),
+    GitHub(Res.string.settings_theme_github, Res.string.settings_theme_github_detail),
+    Red(Res.string.settings_theme_red, Res.string.settings_theme_red_detail),
 }
+
+/** The page the app opens on. */
+enum class Start(override val title: StringResource, override val detail: StringResource) : Choice {
+    Home(Res.string.settings_start_home, Res.string.settings_start_home_detail),
+    Last(Res.string.settings_start_last, Res.string.settings_start_last_detail),
+}
+
+/** When Plugins over Bluetooth reads the catalogue from GitHub; nothing leaves the phone unasked by default. */
+enum class CatalogueLoad(override val title: StringResource, override val detail: StringResource) : Choice {
+    Tap(Res.string.settings_catalogue_tap, Res.string.settings_catalogue_tap_detail),
+    Open(Res.string.settings_catalogue_open, Res.string.settings_catalogue_open_detail),
+}
+
+/** Everything the user sets, kept between runs; [lastPage] is where [Start.Last] opens. */
+data class Preferences(
+    val theme: Theme = Theme.System,
+    val start: Start = Start.Home,
+    val catalogue: CatalogueLoad = CatalogueLoad.Tap,
+    val lastPage: Page = Page.Home,
+)
 
 /** GitHub Light Default, from Primer's github-light-default. */
 private val GitHubLight = lightColorScheme(
@@ -175,38 +203,78 @@ fun colorSchemeOf(theme: Theme): ColorScheme = when (theme) {
 
 /** Settings, grouped in cards. */
 @Composable
-fun SettingsPage(theme: Theme, onTheme: (Theme) -> Unit) {
+fun SettingsPage(preferences: Preferences, onPreferences: (Preferences) -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        SettingsCard("Appearance", AppearanceIcon) {
-            Row(
-                modifier = Modifier.padding(start = SETTING_INDENT),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+        SettingsCard(stringResource(Res.string.settings_general), Res.drawable.tune) {
+            ChoiceSetting(
+                Res.drawable.home,
+                stringResource(Res.string.settings_start),
+                Start.entries,
+                preferences.start,
             ) {
-                AppIcon(ThemeIcon, contentDescription = null)
-                Text("Theme", style = MaterialTheme.typography.titleSmall)
+                onPreferences(preferences.copy(start = it))
             }
-            Column(Modifier.padding(start = SETTING_INDENT * 2).selectableGroup()) {
-                for (option in Theme.entries) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(option == theme, role = Role.RadioButton) { onTheme(option) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = option == theme, onClick = null)
-                        Column(modifier = Modifier.padding(start = 16.dp)) {
-                            Text(option.title, style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                option.detail,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+        }
+        SettingsCard(stringResource(Res.string.settings_appearance), Res.drawable.visibility) {
+            ChoiceSetting(
+                Res.drawable.palette,
+                stringResource(Res.string.settings_theme),
+                Theme.entries,
+                preferences.theme,
+            ) {
+                onPreferences(preferences.copy(theme = it))
+            }
+        }
+        SettingsCard(stringResource(Res.string.page_plugins), Res.drawable.extension) {
+            ChoiceSetting(
+                Res.drawable.cloud_download,
+                stringResource(Res.string.settings_catalogue),
+                CatalogueLoad.entries,
+                preferences.catalogue,
+            ) { onPreferences(preferences.copy(catalogue = it)) }
+        }
+    }
+}
+
+/** A setting with [icon] and [title] above its [choices] as radio buttons. */
+@Composable
+private fun <T : Choice> ChoiceSetting(
+    icon: DrawableResource,
+    title: String,
+    choices: List<T>,
+    selected: T,
+    onSelect: (T) -> Unit,
+) {
+    // The card spaces its content by 8 dp; the title and its choices keep that.
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.padding(start = SETTING_INDENT),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppIcon(icon, contentDescription = null)
+            Text(title, style = MaterialTheme.typography.titleSmall)
+        }
+        Column(Modifier.padding(start = SETTING_INDENT * 2).selectableGroup()) {
+            for (option in choices) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(option == selected, role = Role.RadioButton) { onSelect(option) }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = option == selected, onClick = null)
+                    Column(modifier = Modifier.padding(start = 16.dp)) {
+                        Text(stringResource(option.title), style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            stringResource(option.detail),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -218,7 +286,7 @@ fun SettingsPage(theme: Theme, onTheme: (Theme) -> Unit) {
 private val SETTING_INDENT = 16.dp
 
 @Composable
-private fun SettingsCard(title: String, icon: ImageVector, content: @Composable () -> Unit) {
+private fun SettingsCard(title: String, icon: DrawableResource, content: @Composable () -> Unit) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {

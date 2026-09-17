@@ -37,7 +37,7 @@ class AndroidRadio(context: Context) : Radio {
 
             override fun onUnavailable() {
                 if (continuation.isActive) {
-                    continuation.resumeWithException(JoinFailed("Could not join ${code.ssid}."))
+                    continuation.resumeWithException(JoinFailed(Res.string.card_error_join, code.ssid))
                 }
             }
 

@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -45,6 +46,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.sqrt
 
 private sealed interface Stage {
@@ -52,7 +56,7 @@ private sealed interface Stage {
     data class Scan(val camera: Boolean = false) : Stage
     data class Joining(val code: JoinCode) : Stage
     data class Folder(val listing: Listing) : Stage
-    data class Failed(val message: String) : Stage
+    data class Failed(val message: Message) : Stage
 }
 
 /** Something the user is asked before it happens. */
@@ -62,8 +66,13 @@ private sealed interface Question {
     data object NewFolder : Question
 }
 
-/** A download or upload, running or ended. */
-private data class Transfer(val name: String, val done: Long = 0, val total: Long? = null, val result: String? = null)
+/** A download, upload or change, running or ended; [name] is a file's or folder's, or a count of files. */
+private data class Transfer(
+    val name: Message,
+    val done: Long = 0,
+    val total: Long? = null,
+    val result: Message? = null,
+)
 
 /**
  * The whole app. [scanner] shows the camera and calls back with the first Knob code it reads;
@@ -72,8 +81,8 @@ private data class Transfer(val name: String, val done: Long = 0, val total: Lon
  * that lets the user pick files to send; [back] takes the system's back gesture while enabled.
  * A [code] given skips the scan. [shared] holds files another app shared, offered for the folder
  * the user opens until sent or declined, which [onShareEnd] reports. [onExit] closes the app from
- * the menu; [libraries] reads the list of libraries it shows. [theme] sets the colours, [onTheme]
- * takes a new choice from the settings.
+ * the menu; [libraries] reads the list of libraries it shows. [preferences] are the settings, [onPreferences]
+ * takes a change, including the page left for [Start.Last].
  */
 @Suppress(
     // The root holds the navigation and the card's actions, and shows any failure of those to the user.
@@ -96,8 +105,8 @@ fun App(
     onShareEnd: () -> Unit = {},
     onExit: () -> Unit = {},
     libraries: suspend () -> String = { "{}" },
-    theme: Theme = Theme.System,
-    onTheme: (Theme) -> Unit = {},
+    preferences: Preferences = Preferences(),
+    onPreferences: (Preferences) -> Unit = {},
     scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
 ) {
     val client = remember { CardClient(httpClient()) }
@@ -106,7 +115,15 @@ fun App(
     var loading by remember { mutableStateOf(false) }
     var transfer by remember { mutableStateOf<Transfer?>(null) }
     var question by remember { mutableStateOf<Question?>(null) }
-    var page by remember { mutableStateOf(if (code != null || shared != null) Page.Card else Page.Home) }
+    var page by remember {
+        mutableStateOf(
+            when {
+                code != null || shared != null -> Page.Card
+                preferences.start == Start.Last -> preferences.lastPage
+                else -> Page.Home
+            },
+        )
+    }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val busy = loading || transfer?.let { it.result == null } == true
 
@@ -114,7 +131,7 @@ fun App(
         if (e is CancellationException) throw e
         radio.leave()
         transfer = null
-        stage = Stage.Failed(e.message ?: e.toString())
+        stage = Stage.Failed(e.toMessage())
     }
 
     fun open(path: String) {
@@ -131,16 +148,17 @@ fun App(
     }
 
     fun download(path: String, name: String) {
-        transfer = Transfer(name)
+        val named = Message.Raw(name)
+        transfer = Transfer(named)
         scope.launch {
             try {
                 val sink = downloads.create(name)
                 val where = client.download(path, sink) { done, total ->
-                    transfer = Transfer(name, done, total)
+                    transfer = Transfer(named, done, total)
                 }
-                transfer = Transfer(name, result = "Saved to $where")
+                transfer = Transfer(named, result = messageOf(Res.string.card_saved_to, where))
             } catch (e: CardException) {
-                transfer = Transfer(name, result = e.message)
+                transfer = Transfer(named, result = e.shown)
             } catch (e: Exception) {
                 fail(e)
             }
@@ -151,15 +169,17 @@ fun App(
         scope.launch {
             try {
                 for (pick in picks) {
-                    transfer = Transfer(pick.name, total = pick.size)
-                    client.upload(path, pick) { done, total -> transfer = Transfer(pick.name, done, total) }
+                    val named = Message.Raw(pick.name)
+                    transfer = Transfer(named, total = pick.size)
+                    client.upload(path, pick) { done, total -> transfer = Transfer(named, done, total) }
                 }
                 transfer = Transfer(
-                    picks.singleOrNull()?.name ?: "${picks.size} files",
-                    result = "Sent",
+                    picks.singleOrNull()?.let { Message.Raw(it.name) }
+                        ?: Message.Plural(Res.plurals.card_files, picks.size),
+                    result = messageOf(Res.string.card_sent),
                 )
             } catch (e: CardException) {
-                transfer = Transfer(transfer?.name ?: "", result = e.message)
+                transfer = Transfer(transfer?.name ?: Message.Raw(""), result = e.shown)
             } catch (e: Exception) {
                 fail(e)
                 return@launch
@@ -169,14 +189,14 @@ fun App(
     }
 
     /** Runs a change to the card, then lists [path] again to show it. */
-    fun change(path: String, name: String, done: String, action: suspend () -> Unit) {
+    fun change(path: String, name: String, done: StringResource, action: suspend () -> Unit) {
         loading = true
         scope.launch {
             try {
                 action()
-                transfer = Transfer(name, result = done)
+                transfer = Transfer(Message.Raw(name), result = messageOf(done))
             } catch (e: CardException) {
-                transfer = Transfer(name, result = e.message)
+                transfer = Transfer(Message.Raw(name), result = e.shown)
             } catch (e: Exception) {
                 loading = false
                 fail(e)
@@ -208,8 +228,13 @@ fun App(
     }
     // Files shared from another app are sent from the card.
     LaunchedEffect(shared) { if (shared != null) page = Page.Card }
+    val latest by rememberUpdatedState(preferences)
+    val keep by rememberUpdatedState(onPreferences)
+    LaunchedEffect(page) {
+        if (page != Page.Settings && page != latest.lastPage) keep(latest.copy(lastPage = page))
+    }
 
-    MaterialTheme(colorScheme = colorSchemeOf(theme)) {
+    MaterialTheme(colorScheme = colorSchemeOf(preferences.theme)) {
         ModalNavigationDrawer(
             drawerState = drawer,
             // Opened by the button only: a swipe from the left edge is Android's back gesture.
@@ -230,7 +255,7 @@ fun App(
             Surface(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                     TopBar(
-                        page.title,
+                        stringResource(page.title),
                         onMenu = { scope.launch { drawer.open() } },
                         onSettings = { page = Page.Settings },
                     )
@@ -243,13 +268,13 @@ fun App(
                         if (page == Page.Status) {
                             StatusPage(bluetooth, bluetoothAccess)
                         } else if (page == Page.Plugins) {
-                            PluginsPage(bluetooth, bluetoothAccess, picker)
+                            PluginsPage(bluetooth, bluetoothAccess, picker, preferences.catalogue)
                         } else if (page != Page.Card) {
                             PageContent(
                                 page,
                                 libraries,
-                                theme,
-                                onTheme,
+                                preferences,
+                                onPreferences,
                                 onPage = { page = it },
                             )
                         } else {
@@ -267,7 +292,7 @@ fun App(
                                             fail(e)
                                         }
                                     }
-                                    Waiting("Joining ${current.code.ssid}")
+                                    Waiting(stringResource(Res.string.card_joining, current.code.ssid))
                                 }
 
                                 is Stage.Folder -> {
@@ -293,8 +318,10 @@ fun App(
                                         Ask(asked, onDismiss = { question = null }) { name ->
                                             question = null
                                             when (asked) {
-                                                is Question.Remove -> change(here, asked.entry.name, "Deleted") {
-                                                    client.delete(here + asked.entry.name)
+                                                is Question.Remove -> {
+                                                    change(here, asked.entry.name, Res.string.card_deleted) {
+                                                        client.delete(here + asked.entry.name)
+                                                    }
                                                 }
 
                                                 is Question.Replace -> {
@@ -302,7 +329,7 @@ fun App(
                                                     upload(here, asked.picks)
                                                 }
 
-                                                Question.NewFolder -> change(here, name, "Made") {
+                                                Question.NewFolder -> change(here, name, Res.string.card_made) {
                                                     client.makeFolder(here + name)
                                                 }
                                             }
@@ -310,7 +337,7 @@ fun App(
                                     }
                                 }
 
-                                is Stage.Failed -> Failed(current.message) { stage = Stage.Scan(camera = true) }
+                                is Stage.Failed -> Failed(current.message.text()) { stage = Stage.Scan(camera = true) }
                             }
                         }
                     }
@@ -337,13 +364,10 @@ private fun ScanScreen(
     BoxWithConstraints {
         val wide = maxWidth > maxHeight
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(
-                "Open Card over Wi-Fi on the Knob, then scan the code on its screen.",
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            Text(stringResource(Res.string.card_scan_intro), style = MaterialTheme.typography.bodyLarge)
             if (shared != null && shared.picks.isNotEmpty()) {
                 Text(
-                    "${filesText(shared.picks.size)} to send; you choose the folder once the card shows.",
+                    pluralStringResource(Res.plurals.card_scan_shared, shared.picks.size, shared.picks.size),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -351,7 +375,7 @@ private fun ScanScreen(
                 // Landscape: button beside the image, the square as tall as the remaining height.
                 Row(modifier = Modifier.weight(1f, fill = false), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Viewfinder(onCode, Modifier.aspectRatio(1f, matchHeightConstraintsFirst = true), scanner)
-                    ActionButton("Close camera", onClick = { open = false }, filled = false)
+                    CloseCamera { open = false }
                 }
             } else if (open) {
                 // Square on the shorter free side, so the button below always stays on screen.
@@ -360,12 +384,17 @@ private fun ScanScreen(
                     Modifier.weight(1f, fill = false).aspectRatio(1f, matchHeightConstraintsFirst = true),
                     scanner,
                 )
-                ActionButton("Close camera", onClick = { open = false }, filled = false)
+                CloseCamera { open = false }
             } else {
-                ActionButton("Scan code", onClick = { open = true })
+                ActionButton(stringResource(Res.string.card_scan_code), onClick = { open = true })
             }
         }
     }
+}
+
+@Composable
+private fun CloseCamera(onClick: () -> Unit) {
+    ActionButton(stringResource(Res.string.card_close_camera), onClick = onClick, filled = false)
 }
 
 /** The camera with corner marks around its middle half, a hint at how large the code should appear. */
@@ -408,7 +437,7 @@ internal fun Waiting(text: String) {
 }
 
 @Composable
-internal fun Failed(message: String, retry: String = "Scan again", onRetry: () -> Unit) {
+internal fun Failed(message: String, retry: String = stringResource(Res.string.card_scan_again), onRetry: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
@@ -449,11 +478,7 @@ private fun FolderScreen(
             )
             if (loading) CircularProgressIndicator()
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionButton("Up", onClick = onUp, enabled = listing.path != "/" && !busy, filled = false)
-            ActionButton("New folder", onClick = onNewFolder, enabled = !busy, filled = false)
-            ActionButton("Upload files", onClick = onUpload, enabled = !busy)
-        }
+        FolderButtons(canGoUp = listing.path != "/" && !busy, busy, onUp, onNewFolder, onUpload)
         if (shared != null) SharedOffer(shared, busy, onSendShare, onDropShare)
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(listing.entries, key = { it.name }) { entry ->
@@ -479,9 +504,30 @@ private fun FolderScreen(
         }
         if (transfer != null) TransferLine(transfer)
         Text(
-            "TeeToTum ${listing.version} · ${listing.entries.size} entries · hold an entry to delete it",
+            pluralStringResource(
+                Res.plurals.card_footer,
+                listing.entries.size,
+                listing.version,
+                listing.entries.size,
+            ),
             style = MaterialTheme.typography.bodySmall,
         )
+    }
+}
+
+/** Up, new folder and upload, above the folder's entries. */
+@Composable
+private fun FolderButtons(
+    canGoUp: Boolean,
+    busy: Boolean,
+    onUp: () -> Unit,
+    onNewFolder: () -> Unit,
+    onUpload: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ActionButton(stringResource(Res.string.card_up), onClick = onUp, enabled = canGoUp, filled = false)
+        ActionButton(stringResource(Res.string.card_new_folder), onClick = onNewFolder, enabled = !busy, filled = false)
+        ActionButton(stringResource(Res.string.card_upload), onClick = onUpload, enabled = !busy)
     }
 }
 
@@ -491,23 +537,32 @@ private fun SharedOffer(shared: Shared, busy: Boolean, onSend: () -> Unit, onDro
     Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val count = shared.picks.size
-            Text(if (count == 0) "The share holds no file to send." else "Send ${filesText(count)} into this folder?")
+            Text(
+                if (count == 0) {
+                    stringResource(Res.string.card_share_empty)
+                } else {
+                    pluralStringResource(Res.plurals.card_share_send, count, count)
+                },
+            )
             if (shared.skipped > 0) {
                 Text(
-                    "${filesText(shared.skipped)} could not be read.",
+                    pluralStringResource(Res.plurals.card_share_skipped, shared.skipped, shared.skipped),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (count > 0) ActionButton("Send here", onClick = onSend, enabled = !busy)
-                ActionButton(if (count == 0) "OK" else "Cancel", onClick = onDrop, filled = false)
+                if (count > 0) {
+                    ActionButton(stringResource(Res.string.card_send_here), onClick = onSend, enabled = !busy)
+                }
+                ActionButton(
+                    stringResource(if (count == 0) Res.string.common_ok else Res.string.common_cancel),
+                    onClick = onDrop,
+                    filled = false,
+                )
             }
         }
     }
 }
-
-/** "1 file", "3 files". */
-fun filesText(count: Int) = if (count == 1) "1 file" else "$count files"
 
 /** Asks [question]; [onYes] gets the folder name the user typed, or "" where none is asked. */
 @Composable
@@ -515,22 +570,24 @@ private fun Ask(question: Question, onDismiss: () -> Unit, onYes: (String) -> Un
     var name by remember { mutableStateOf("") }
     val (title, text, yes) = when (question) {
         is Question.Remove -> Triple(
-            "Delete ${question.entry.name}?",
-            if (question.entry.directory) {
-                "Only an empty folder can be deleted."
-            } else {
-                "The file is removed from the card."
-            },
-            "Delete",
+            stringResource(Res.string.card_delete_title, question.entry.name),
+            stringResource(
+                if (question.entry.directory) Res.string.card_delete_folder else Res.string.card_delete_file,
+            ),
+            stringResource(Res.string.card_delete),
         )
 
         is Question.Replace -> Triple(
-            "Replace ${filesText(question.taken.size)}?",
+            pluralStringResource(Res.plurals.card_replace_title, question.taken.size, question.taken.size),
             question.taken.joinToString("\n"),
-            "Replace",
+            stringResource(Res.string.card_replace),
         )
 
-        Question.NewFolder -> Triple("New folder", null, "Make")
+        Question.NewFolder -> Triple(
+            stringResource(Res.string.card_new_folder),
+            null,
+            stringResource(Res.string.card_make),
+        )
     }
     val ready = question != Question.NewFolder || name.isNotBlank()
     AlertDialog(
@@ -542,7 +599,7 @@ private fun Ask(question: Question, onDismiss: () -> Unit, onYes: (String) -> Un
                     value = name,
                     onValueChange = { name = it.replace("/", "") },
                     singleLine = true,
-                    label = { Text("Name") },
+                    label = { Text(stringResource(Res.string.card_folder_name)) },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 )
             } else if (text != null) {
@@ -550,20 +607,28 @@ private fun Ask(question: Question, onDismiss: () -> Unit, onYes: (String) -> Un
             }
         },
         confirmButton = { ActionButton(yes, onClick = { onYes(name.trim()) }, enabled = ready) },
-        dismissButton = { ActionButton("Cancel", onClick = onDismiss, filled = false) },
+        dismissButton = { ActionButton(stringResource(Res.string.common_cancel), onClick = onDismiss, filled = false) },
     )
 }
 
 @Composable
 private fun TransferLine(transfer: Transfer) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        val name = transfer.name.text()
         if (transfer.result != null) {
-            Text("${transfer.name}: ${transfer.result}", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                stringResource(Res.string.common_name_value, name, transfer.result.text()),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         } else {
             val total = transfer.total
-            val shown = if (total != null) " of ${sizeText(total)}" else ""
+            val done = sizeText(transfer.done)
             Text(
-                "${transfer.name}: ${sizeText(transfer.done)}$shown",
+                if (total != null) {
+                    stringResource(Res.string.card_progress, name, done, sizeText(total))
+                } else {
+                    stringResource(Res.string.common_name_value, name, done)
+                },
                 style = MaterialTheme.typography.bodyMedium,
             )
             if (total != null && total > 0) {

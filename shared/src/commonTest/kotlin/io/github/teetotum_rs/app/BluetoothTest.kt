@@ -24,15 +24,21 @@ class BluetoothTest {
 
     @Test
     fun showsTheCardInDecimalGigabytes() {
-        assertEquals("0.401 GB", cardText(401_604_608))
-        assertEquals("0.040 GB", cardText(40_960_000))
-        assertEquals("7.95 GB", cardText(7_958_691_840))
-        assertEquals("1.05 GB", cardText(1_059_999_999))
-        assertEquals("15.9 GB", cardText(15_931_539_456))
-        assertEquals("10.0 GB", cardText(10_099_999_999))
-        assertEquals("127 GB", cardText(127_865_454_592))
-        assertEquals("1024 GB", cardText(1_024_000_000_000))
-        assertEquals("No card in the Knob.", cardText(0))
-        assertEquals("Needs firmware 0.3.4 or later.", cardText(null))
+        assertEquals(Message.Raw("0.401 GB"), cardText(401_604_608))
+        assertEquals(Message.Raw("0.040 GB"), cardText(40_960_000))
+        assertEquals(Message.Raw("7.95 GB"), cardText(7_958_691_840))
+        assertEquals(Message.Raw("1.05 GB"), cardText(1_059_999_999))
+        assertEquals(Message.Raw("15.9 GB"), cardText(15_931_539_456))
+        assertEquals(Message.Raw("10.0 GB"), cardText(10_099_999_999))
+        assertEquals(Message.Raw("127 GB"), cardText(127_865_454_592))
+        assertEquals(Message.Raw("1024 GB"), cardText(1_024_000_000_000))
+        assertEquals(messageOf(Res.string.status_no_card), cardText(0))
+        assertEquals(messageOf(Res.string.status_card_unknown), cardText(null))
+    }
+
+    @Test
+    fun showsTheFirmwareOrWhyItIsMissing() {
+        assertEquals(Message.Raw("v0.3.4 e11dd8a"), firmwareText("v0.3.4 e11dd8a"))
+        assertEquals(messageOf(Res.string.status_firmware_unknown), firmwareText(null))
     }
 }

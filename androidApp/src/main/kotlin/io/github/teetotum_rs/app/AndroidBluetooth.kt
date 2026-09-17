@@ -35,13 +35,13 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
     private val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
 
     override suspend fun status(): KnobStatus = session {
-        val service = service(KnobService.SERVICE) ?: throw BluetoothFailed("This Knob does not report its status.")
+        val service = service(KnobService.SERVICE) ?: throw BluetoothFailed(Res.string.bluetooth_error_no_status)
 
         /** The characteristic's bytes, or null when this firmware does not have it. */
         suspend fun bytes(uuid: String): ByteArray? = service.characteristic(uuid)?.let { read(it) }
 
         suspend fun number(uuid: String): Long =
-            unsignedOf(bytes(uuid) ?: throw BluetoothFailed("This Knob does not report its status."))
+            unsignedOf(bytes(uuid) ?: throw BluetoothFailed(Res.string.bluetooth_error_no_status))
 
         KnobStatus(
             uptimeSeconds = number(KnobService.UPTIME),
@@ -54,16 +54,16 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
     override suspend fun sendPlugin(module: ByteArray, header: ByteArray, progress: (sent: Int) -> Unit) = session {
         val mtu = requestMtu(MTU)
         val service = service(PluginService.SERVICE)
-            ?: throw BluetoothFailed("This Knob takes no plugins over Bluetooth. Update its firmware.")
+            ?: throw BluetoothFailed(Res.string.bluetooth_error_no_plugins)
         val control = service.characteristic(PluginService.CONTROL)
         val data = service.characteristic(PluginService.DATA)
         val status = service.characteristic(PluginService.STATUS)
         if (control == null || data == null || status == null) {
-            throw BluetoothFailed("This Knob takes no plugins over Bluetooth. Update its firmware.")
+            throw BluetoothFailed(Res.string.bluetooth_error_no_plugins)
         }
         subscribe(status)
         if (!write(control, byteArrayOf(PluginService.BEGIN) + header)) {
-            throw BluetoothFailed("The Knob refused. Open Settings > Receive on the Knob and try again.")
+            throw BluetoothFailed(Res.string.bluetooth_error_refused_begin)
         }
         awaitStatus(PluginService.READY)
         try {
@@ -72,14 +72,14 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
             var offset = 0
             while (offset < module.size) {
                 if (!write(data, PluginService.pieceAt(module, offset, piece))) {
-                    throw BluetoothFailed("The Knob refused a piece of the plugin.")
+                    throw BluetoothFailed(Res.string.bluetooth_error_refused_piece)
                 }
                 checkStatuses()
                 offset = minOf(offset + piece, module.size)
                 progress(offset)
             }
             if (!write(control, byteArrayOf(PluginService.COMMIT))) {
-                throw BluetoothFailed("The Knob refused the plugin.")
+                throw BluetoothFailed(Res.string.bluetooth_error_refused_plugin)
             }
             awaitStatus(PluginService.WRITTEN)
         } catch (e: BluetoothFailed) {
@@ -90,21 +90,21 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
 
     /** Finds the Knob, connects, runs [block] and disconnects. */
     private suspend fun <T> session(block: suspend Session.() -> T): T {
-        val adapter = adapter ?: throw BluetoothFailed("This phone has no Bluetooth.")
-        if (!adapter.isEnabled) throw BluetoothFailed("Bluetooth is off. Turn it on and try again.")
+        val adapter = adapter ?: throw BluetoothFailed(Res.string.bluetooth_error_no_adapter)
+        if (!adapter.isEnabled) throw BluetoothFailed(Res.string.bluetooth_error_off)
         val device = try {
             withTimeout(SCAN_TIMEOUT_MS) { find(adapter.bluetoothLeScanner) }
         } catch (_: TimeoutCancellationException) {
-            throw BluetoothFailed("No Knob in range.")
+            throw BluetoothFailed(Res.string.bluetooth_error_out_of_range)
         }
         val session = Session()
         val gatt = device.connectGatt(context, false, session.callback, BluetoothDevice.TRANSPORT_LE)
-            ?: throw BluetoothFailed("Could not connect to the Knob.")
+            ?: throw BluetoothFailed(Res.string.bluetooth_error_connect)
         session.gatt = gatt
         return try {
             session.expect<Event.Connected>()
             gatt.discoverServices()
-            if (!session.expect<Event.Discovered>().ok) throw BluetoothFailed("The Knob did not list its services.")
+            if (!session.expect<Event.Discovered>().ok) throw BluetoothFailed(Res.string.bluetooth_error_services)
             session.block()
         } finally {
             gatt.disconnect()
@@ -115,7 +115,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
     private suspend fun find(scanner: android.bluetooth.le.BluetoothLeScanner?): BluetoothDevice =
         suspendCancellableCoroutine { continuation ->
             if (scanner == null) {
-                continuation.resumeWithException(BluetoothFailed("Bluetooth is off. Turn it on and try again."))
+                continuation.resumeWithException(BluetoothFailed(Res.string.bluetooth_error_off))
                 return@suspendCancellableCoroutine
             }
             val found = object : ScanCallback() {
@@ -126,7 +126,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
 
                 override fun onScanFailed(errorCode: Int) {
                     if (continuation.isActive) {
-                        continuation.resumeWithException(BluetoothFailed("Could not search for the Knob ($errorCode)."))
+                        continuation.resumeWithException(BluetoothFailed(Res.string.bluetooth_error_search, errorCode))
                     }
                 }
             }
@@ -214,12 +214,12 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
             val event = try {
                 withTimeout(STEP_TIMEOUT_MS) { events.receive() }
             } catch (_: TimeoutCancellationException) {
-                throw BluetoothFailed("The Knob did not answer.")
+                throw BluetoothFailed(Res.string.bluetooth_error_silent)
             }
             return when (event) {
                 is T -> event
-                Event.Disconnected -> throw BluetoothFailed("The Knob ended the connection.")
-                else -> throw BluetoothFailed("The Knob answered out of turn.")
+                Event.Disconnected -> throw BluetoothFailed(Res.string.bluetooth_error_disconnected)
+                else -> throw BluetoothFailed(Res.string.bluetooth_error_out_of_turn)
             }
         }
 
@@ -229,8 +229,8 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
             getCharacteristic(UUID.fromString(uuid))
 
         suspend fun read(characteristic: BluetoothGattCharacteristic): ByteArray {
-            if (!gatt.readCharacteristic(characteristic)) throw BluetoothFailed("Could not read from the Knob.")
-            return expect<Event.Read>().value ?: throw BluetoothFailed("Could not read from the Knob.")
+            if (!gatt.readCharacteristic(characteristic)) throw BluetoothFailed(Res.string.bluetooth_error_read)
+            return expect<Event.Read>().value ?: throw BluetoothFailed(Res.string.bluetooth_error_read)
         }
 
         /** Writes [value] and waits for the Knob to take it; false when it refuses. */
@@ -246,7 +246,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
                     gatt.writeCharacteristic(this)
                 }
             }
-            if (!started) throw BluetoothFailed("Could not write to the Knob.")
+            if (!started) throw BluetoothFailed(Res.string.bluetooth_error_write)
             return expect<Event.Written>().ok
         }
 
@@ -257,7 +257,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         suspend fun subscribe(characteristic: BluetoothGattCharacteristic) {
             gatt.setCharacteristicNotification(characteristic, true)
             val descriptor = characteristic.getDescriptor(UUID.fromString(NOTIFICATIONS))
-                ?: throw BluetoothFailed("The Knob does not report how the upload goes.")
+                ?: throw BluetoothFailed(Res.string.bluetooth_error_no_progress)
             val value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
             val started = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 gatt.writeDescriptor(descriptor, value) == BluetoothStatusCodes.SUCCESS
@@ -269,7 +269,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
                 }
             }
             if (!started || !expect<Event.Written>().ok) {
-                throw BluetoothFailed("The Knob does not report how the upload goes.")
+                throw BluetoothFailed(Res.string.bluetooth_error_no_progress)
             }
         }
 
@@ -277,7 +277,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         suspend fun awaitStatus(code: Int) {
             while (true) {
                 val status = withTimeoutOrNull(STEP_TIMEOUT_MS) { statuses.receive() }
-                    ?: throw BluetoothFailed("The Knob did not answer.")
+                    ?: throw BluetoothFailed(Res.string.bluetooth_error_silent)
                 failOn(status)
                 if (status.firstOrNull()?.toInt() == code) return
             }

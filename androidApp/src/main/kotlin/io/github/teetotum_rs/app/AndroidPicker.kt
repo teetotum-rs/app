@@ -8,7 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import java.io.IOException
 
 /** The system's document picker, for any number of files of any type. */
 @Composable
@@ -32,7 +31,7 @@ internal fun pickOf(context: Context, uri: Uri): Pick? {
     } ?: return null
     if (name == null || size == null) return null
     return Pick(name, size, modified?.takeIf { it > 0 }) {
-        val input = resolver.openInputStream(uri) ?: throw IOException("Could not read $name.")
+        val input = resolver.openInputStream(uri) ?: throw FileFailed(Res.string.file_error_read, name)
         object : FileSource {
             override fun read(buffer: ByteArray, count: Int) = input.read(buffer, 0, count)
 

@@ -28,7 +28,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mikepenz.aboutlibraries.entity.Library
@@ -39,36 +38,38 @@ import com.mikepenz.aboutlibraries.ui.compose.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryActionKind
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /** What the app shows: home, the card, or one of the pages from the menu. */
-enum class Page(val title: String, val icon: ImageVector) {
-    Home("Home", HomeIcon),
-    Card("Card over Wi-Fi", WifiIcon),
-    Status("Status over Bluetooth", BluetoothIcon),
-    Plugins("Plugins over Bluetooth", PluginIcon),
-    About("About", AboutIcon),
-    Help("Help", HelpIcon),
-    Imprint("Imprint", ImprintIcon),
-    Privacy("Privacy", PrivacyIcon),
-    Changelog("Changelog", ChangelogIcon),
-    Libraries("Libraries", LibrariesIcon),
-    Settings("Settings", SettingsIcon),
+enum class Page(val title: StringResource, val icon: DrawableResource) {
+    Home(Res.string.page_home, Res.drawable.home),
+    Card(Res.string.page_card, Res.drawable.wifi),
+    Status(Res.string.page_status, Res.drawable.bluetooth),
+    Plugins(Res.string.page_plugins, Res.drawable.extension),
+    About(Res.string.page_about, Res.drawable.info),
+    Help(Res.string.page_help, Res.drawable.help),
+    Imprint(Res.string.page_imprint, Res.drawable.article),
+    Privacy(Res.string.page_privacy, Res.drawable.shield),
+    Changelog(Res.string.page_changelog, Res.drawable.history),
+    Libraries(Res.string.page_libraries, Res.drawable.library_books),
+    Settings(Res.string.page_settings, Res.drawable.settings),
 }
 
 /** The pages that sit under another in the menu, each with the line on its card there. */
-private val GROUPS: Map<Page, List<Pair<Page, String>>> = mapOf(
+private val GROUPS: Map<Page, List<Pair<Page, StringResource>>> = mapOf(
     Page.Home to listOf(
-        Page.Card to "Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.",
-        Page.Status to
-            "See over Bluetooth the Knob's firmware, card, how long it has run and how many Wi-Fi networks it sees.",
-        Page.Plugins to "Send plugins to the Knob over Bluetooth, from the catalogue or your own.",
+        Page.Card to Res.string.page_card_detail,
+        Page.Status to Res.string.page_status_detail,
+        Page.Plugins to Res.string.page_plugins_detail,
     ),
     Page.About to listOf(
-        Page.Help to "How to use the app, page by page.",
-        Page.Imprint to "Who makes the app, and where its code and the Knob's live.",
-        Page.Privacy to "What the app does with your data.",
-        Page.Changelog to "What changed in each version.",
-        Page.Libraries to "The open-source libraries the app is built on, with their licences.",
+        Page.Help to Res.string.page_help_detail,
+        Page.Imprint to Res.string.page_imprint_detail,
+        Page.Privacy to Res.string.page_privacy_detail,
+        Page.Changelog to Res.string.page_changelog_detail,
+        Page.Libraries to Res.string.page_libraries_detail,
     ),
 )
 
@@ -95,7 +96,11 @@ fun TopBar(title: String, onMenu: () -> Unit, onSettings: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onMenu) {
-            AppIcon(MenuIcon, contentDescription = "Open menu", modifier = Modifier.size(BAR_ICON))
+            AppIcon(
+                Res.drawable.menu,
+                contentDescription = stringResource(Res.string.menu_open),
+                modifier = Modifier.size(BAR_ICON),
+            )
         }
         Text(
             title,
@@ -104,7 +109,9 @@ fun TopBar(title: String, onMenu: () -> Unit, onSettings: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = onSettings) { AppIcon(SettingsIcon, contentDescription = "Open settings") }
+        IconButton(onClick = onSettings) {
+            AppIcon(Res.drawable.settings, contentDescription = stringResource(Res.string.menu_open_settings))
+        }
     }
 }
 
@@ -116,16 +123,20 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
     ModalDrawerSheet(drawerState = drawer, modifier = Modifier.width(300.dp)) {
         Row(modifier = Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) {
-                AppIcon(CloseIcon, contentDescription = "Close menu", modifier = Modifier.size(BAR_ICON))
+                AppIcon(
+                    Res.drawable.close,
+                    contentDescription = stringResource(Res.string.menu_close),
+                    modifier = Modifier.size(BAR_ICON),
+                )
             }
-            Text("TeeToTum", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(Res.string.app_name), style = MaterialTheme.typography.titleLarge)
         }
         Column(modifier = Modifier.padding(12.dp)) {
             for (entry in Page.entries) {
                 val grouped = entry in GROUPED
                 if (grouped && entry.parent in folded) continue
                 NavigationDrawerItem(
-                    label = { Text(entry.title) },
+                    label = { Text(stringResource(entry.title)) },
                     icon = { AppIcon(entry.icon, contentDescription = null) },
                     selected = entry == page,
                     shape = ButtonShape,
@@ -141,8 +152,11 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
                                 modifier = Modifier.offset(x = 20.dp),
                             ) {
                                 AppIcon(
-                                    if (open) CollapseIcon else ExpandIcon,
-                                    contentDescription = "${if (open) "Hide" else "Show"} pages under ${entry.title}",
+                                    if (open) Res.drawable.expand_less else Res.drawable.expand_more,
+                                    contentDescription = stringResource(
+                                        if (open) Res.string.menu_hide_group else Res.string.menu_show_group,
+                                        stringResource(entry.title),
+                                    ),
                                 )
                             }
                         }
@@ -153,8 +167,8 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             NavigationDrawerItem(
-                label = { Text("Exit") },
-                icon = { AppIcon(ExitIcon, contentDescription = null) },
+                label = { Text(stringResource(Res.string.menu_exit)) },
+                icon = { AppIcon(Res.drawable.logout, contentDescription = null) },
                 selected = false,
                 shape = ButtonShape,
                 onClick = onExit,
@@ -165,22 +179,23 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
 
 /**
  * A page from the menu other than [Page.Card]; [libraries] reads the list for [Page.Libraries],
- * [theme] and [onTheme] are the setting shown on [Page.Settings], [onPage] opens a page from a group's cards.
+ * [preferences] and [onPreferences] are the settings shown on [Page.Settings], [onPage] opens a page
+ * from a group's cards.
  */
 @OptIn(ExperimentalMaterial3Api::class) // LibrariesContainer's overload with its own dialog state
 @Composable
 fun PageContent(
     page: Page,
     libraries: suspend () -> String,
-    theme: Theme,
-    onTheme: (Theme) -> Unit,
+    preferences: Preferences,
+    onPreferences: (Preferences) -> Unit,
     onPage: (Page) -> Unit,
 ) {
     val cards = GROUPS[page]
     if (cards != null) {
         CardsPage(cards, onPage)
     } else if (page == Page.Settings) {
-        SettingsPage(theme, onTheme)
+        SettingsPage(preferences, onPreferences)
     } else if (page == Page.Libraries) {
         val listed by produceLibraries { libraries() }
         var dialog by remember { mutableStateOf<Library?>(null) }
@@ -214,12 +229,12 @@ fun PageContent(
 
 /** A group's page: a card for each page under it, which [onPage] opens. */
 @Composable
-private fun CardsPage(cards: List<Pair<Page, String>>, onPage: (Page) -> Unit) {
+private fun CardsPage(cards: List<Pair<Page, StringResource>>, onPage: (Page) -> Unit) {
     CardColumn {
         for ((card, detail) in cards) {
-            PageCard(card.icon, card.title, onClick = { onPage(card) }) {
+            PageCard(card.icon, stringResource(card.title), onClick = { onPage(card) }) {
                 Text(
-                    detail,
+                    stringResource(detail),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -251,7 +266,7 @@ internal fun CardColumn(content: @Composable () -> Unit) {
 /** A card with [icon] and [title] above its [content]; with [onClick], tapping the card calls it. */
 @Composable
 internal fun PageCard(
-    icon: ImageVector,
+    icon: DrawableResource,
     title: String,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
@@ -299,32 +314,32 @@ internal fun sectionsOf(text: String): Pair<String, List<Pair<String, String>>> 
     return parts.first().trim() to sections
 }
 
-/** The icon on each card of the Markdown pages, by its heading; every version in the changelog has [ReleaseIcon]. */
-internal val SECTION_ICONS: Map<String, ImageVector> = mapOf(
-    "Menu" to MenuIcon,
-    "Getting around" to GettingAroundIcon,
-    "Connect" to ScanIcon,
-    "On the card" to CardIcon,
-    "From other apps" to ShareIcon,
-    "Settings" to SettingsIcon,
-    "About" to AboutIcon,
-    "Provider (§ 5 DDG)" to ProviderIcon,
-    "Contact" to ContactIcon,
-    "The app and the Knob" to CodeIcon,
-    "Liability" to LiabilityIcon,
-    "Links" to LinkIcon,
-    "Last updated" to DateIcon,
-    "Camera" to CameraIcon,
-    "Wi-Fi" to WifiIcon,
-    "Bluetooth" to BluetoothIcon,
-    "Status over Bluetooth" to BluetoothIcon,
-    "Plugins over Bluetooth" to PluginIcon,
-    "Plugins" to PluginIcon,
-    "Files" to FolderIcon,
+/** The icon on each card of the Markdown pages, by its heading; every version in the changelog has `new_releases`. */
+internal val SECTION_ICONS: Map<String, DrawableResource> = mapOf(
+    "Menu" to Res.drawable.menu,
+    "Getting around" to Res.drawable.explore,
+    "Connect" to Res.drawable.qr_code_scanner,
+    "Card over Wi-Fi" to Res.drawable.wifi,
+    "From other apps" to Res.drawable.share,
+    "Settings" to Res.drawable.settings,
+    "About" to Res.drawable.info,
+    "Provider (§ 5 DDG)" to Res.drawable.badge,
+    "Contact" to Res.drawable.mail,
+    "The app and the Knob" to Res.drawable.code,
+    "Liability" to Res.drawable.gavel,
+    "Links" to Res.drawable.link,
+    "Last updated" to Res.drawable.event,
+    "Camera" to Res.drawable.photo_camera,
+    "Wi-Fi" to Res.drawable.wifi,
+    "Bluetooth" to Res.drawable.bluetooth,
+    "Status over Bluetooth" to Res.drawable.bluetooth,
+    "Plugins over Bluetooth" to Res.drawable.extension,
+    "Plugins" to Res.drawable.extension,
+    "Files" to Res.drawable.folder,
 )
 
-private fun iconOf(page: Page, title: String): ImageVector =
-    if (page == Page.Changelog) ReleaseIcon else SECTION_ICONS[title] ?: page.icon
+private fun iconOf(page: Page, title: String): DrawableResource =
+    if (page == Page.Changelog) Res.drawable.new_releases else SECTION_ICONS[title] ?: page.icon
 
 internal fun textOf(page: Page): String = when (page) {
     Page.Help -> HELP

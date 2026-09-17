@@ -34,6 +34,7 @@ import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.ReaderException
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
+import org.jetbrains.compose.resources.stringResource
 import java.util.concurrent.Executors
 
 /** The camera, reading QR codes until one is a Knob's; asks for the camera first. */
@@ -54,7 +55,10 @@ fun Scanner(onCode: (JoinCode) -> Unit) {
     } else {
         LaunchedEffect(Unit) { ask.launch(Manifest.permission.CAMERA) }
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            ActionButton("Allow the camera", onClick = { ask.launch(Manifest.permission.CAMERA) })
+            ActionButton(
+                stringResource(Res.string.card_allow_camera),
+                onClick = { ask.launch(Manifest.permission.CAMERA) },
+            )
         }
     }
 }

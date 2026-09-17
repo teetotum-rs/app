@@ -26,11 +26,16 @@ import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.StringResource
 
 /** The address the Knob serves its card on while the dialog is open. */
 const val KNOB_URL = "http://192.168.4.1"
 
-class CardException(message: String) : Exception(message)
+class CardException(override val shown: Message) :
+    Exception(shown.toString()),
+    Shown {
+    constructor(resource: StringResource, vararg args: Any) : this(messageOf(resource, *args))
+}
 
 class CardClient(private val http: HttpClient, private val base: String = KNOB_URL) {
     /** The folder at [path], `/` or `/NAME/SUB/`. */
@@ -39,15 +44,15 @@ class CardClient(private val http: HttpClient, private val base: String = KNOB_U
             header(HttpHeaders.Accept, ContentType.Application.Json.toString())
         }
         if (!response.status.isSuccess()) {
-            throw CardException("The Knob answered ${response.status.value} for $path.")
+            throw CardException(Res.string.card_error_answered, response.status.value, path)
         }
         if (response.contentType()?.match(ContentType.Application.Json) != true) {
-            throw CardException("The Knob needs firmware $OLDEST_FIRMWARE or later.")
+            throw CardException(Res.string.card_error_firmware, OLDEST_FIRMWARE.toString())
         }
         val listing = Listing.decode(response.bodyAsText())
         val version = FirmwareVersion.parse(listing.version)
         if (version != null && version < OLDEST_FIRMWARE) {
-            throw CardException("The Knob needs firmware $OLDEST_FIRMWARE or later.")
+            throw CardException(Res.string.card_error_firmware, OLDEST_FIRMWARE.toString())
         }
         return listing
     }
@@ -57,7 +62,7 @@ class CardClient(private val http: HttpClient, private val base: String = KNOB_U
     suspend fun download(path: String, sink: FileSink, progress: (done: Long, total: Long?) -> Unit): String =
         http.prepareGet(url(path, folder = false)).execute { response ->
             if (!response.status.isSuccess()) {
-                throw CardException("The Knob answered ${response.status.value} for $path.")
+                throw CardException(Res.string.card_error_answered, response.status.value, path)
             }
             val total = response.contentLength()
             val channel = response.bodyAsChannel()
@@ -72,7 +77,7 @@ class CardClient(private val http: HttpClient, private val base: String = KNOB_U
                     progress(done, total)
                 }
                 if (total != null && done != total) {
-                    throw CardException("The download of $path stopped after $done of $total bytes.")
+                    throw CardException(Res.string.card_error_stopped, path, done, total)
                 }
                 withContext(Dispatchers.IO) { sink.commit() }
             } catch (e: Throwable) {
@@ -109,7 +114,7 @@ class CardClient(private val http: HttpClient, private val base: String = KNOB_U
                 }
                 // A short body makes the Knob remove what arrived.
                 if (done != file.size) {
-                    throw CardException("${file.name} changed while it was sent.")
+                    throw CardException(Res.string.card_error_changed, file.name)
                 }
             }
         }
@@ -133,8 +138,9 @@ class CardClient(private val http: HttpClient, private val base: String = KNOB_U
     /** Throws the Knob's own sentence, "the folder is not empty", when it refused. */
     private suspend fun check(response: HttpResponse, name: String) {
         if (response.status.isSuccess()) return
-        val why = response.bodyAsText().trim().ifEmpty { "the Knob answered ${response.status.value}" }
-        throw CardException("$name: $why")
+        val why = response.bodyAsText().trim()
+        if (why.isEmpty()) throw CardException(Res.string.card_error_refused, name, response.status.value)
+        throw CardException(Res.string.common_name_value, name, why)
     }
 
     private fun url(path: String, folder: Boolean, vararg query: Pair<String, String>): Url = URLBuilder(base).apply {

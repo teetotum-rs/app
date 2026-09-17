@@ -20,7 +20,7 @@ class PagesTest {
     @Test
     fun everyCardOnTheWrittenPagesHasItsOwnIcon() {
         val missing = listOf(Page.Help, Page.Imprint, Page.Privacy)
-            .flatMap { page -> sectionsOf(textOf(page)).second.map { "${page.title}: ${it.first}" to it.first } }
+            .flatMap { page -> sectionsOf(textOf(page)).second.map { "${page.name}: ${it.first}" to it.first } }
             .filter { (_, title) -> title !in SECTION_ICONS }
             .map { it.first }
         assertTrue(missing.isEmpty(), "headings without an icon in SECTION_ICONS: $missing")
