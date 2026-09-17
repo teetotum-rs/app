@@ -1,11 +1,11 @@
 package io.github.teetotum_rs.app
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,38 +25,51 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mikepenz.aboutlibraries.entity.Library
+import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
+import com.mikepenz.aboutlibraries.ui.compose.m3.style.m3VariantTextStyles
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryActionKind
 import com.mikepenz.aboutlibraries.ui.compose.produceLibraries
+import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.m3.markdownTypography
 
 /** What the app shows: the card, or one of the pages from the menu. */
-enum class Page(val title: String) {
-    Card("Card over Wi-Fi"),
-    Settings("Settings"),
-    Help("Help"),
-    Imprint("Imprint"),
-    Privacy("Privacy"),
-    Changelog("Changelog"),
-    Libraries("Libraries"),
+enum class Page(val title: String, val icon: ImageVector) {
+    Card("Card over Wi-Fi", WifiIcon),
+    Settings("Settings", SettingsIcon),
+    Help("Help", HelpIcon),
+    Imprint("Imprint", ImprintIcon),
+    Privacy("Privacy", PrivacyIcon),
+    Changelog("Changelog", ChangelogIcon),
+    Libraries("Libraries", LibrariesIcon),
 }
 
-/** The row above every page; the menu button sits where the menu's close button appears. */
+/** Menu and close are thin glyphs; at this size they weigh as much as the 24 dp settings gear. */
+private val BAR_ICON = 28.dp
+
+/**
+ * The row above every page; the menu button sits where the menu's close button appears, the
+ * settings button on the right.
+ */
 @Composable
-fun TopBar(title: String, onMenu: () -> Unit) {
+fun TopBar(title: String, onMenu: () -> Unit, onSettings: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onMenu) { Icon(MenuIcon, contentDescription = "Open menu") }
+        IconButton(onClick = onMenu) { Icon(MenuIcon, contentDescription = "Open menu", modifier = Modifier.size(BAR_ICON)) }
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
+        IconButton(onClick = onSettings) { Icon(SettingsIcon, contentDescription = "Open settings") }
     }
 }
 
@@ -66,19 +79,25 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
     // Narrower than Material's 360 dp, so the page stays in sight on a phone of that width.
     ModalDrawerSheet(drawerState = drawer, modifier = Modifier.width(300.dp)) {
         Row(modifier = Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) { Icon(CloseIcon, contentDescription = "Close menu") }
+            IconButton(onClick = onClose) { Icon(CloseIcon, contentDescription = "Close menu", modifier = Modifier.size(BAR_ICON)) }
             Text("TeeToTum", style = MaterialTheme.typography.titleLarge)
         }
         Column(modifier = Modifier.padding(12.dp)) {
             for (entry in Page.entries) {
                 NavigationDrawerItem(
                     label = { Text(entry.title) },
+                    icon = { Icon(entry.icon, contentDescription = null) },
                     selected = entry == page,
                     onClick = { onPage(entry) },
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            NavigationDrawerItem(label = { Text("Exit") }, selected = false, onClick = onExit)
+            NavigationDrawerItem(
+                label = { Text("Exit") },
+                icon = { Icon(ExitIcon, contentDescription = null) },
+                selected = false,
+                onClick = onExit,
+            )
         }
     }
 }
@@ -103,6 +122,15 @@ fun PageContent(page: Page, libraries: suspend () -> String, theme: Theme, onThe
             onDialogLibraryChange = { dialog = it },
             onSheetLibraryChange = { sheet = it },
             modifier = Modifier.fillMaxSize(),
+            // The library's small defaults, raised to the sizes the other pages use.
+            variantTextStyles = LibraryDefaults.m3VariantTextStyles(
+                nameTextStyle = MaterialTheme.typography.titleMedium,
+                authorTextStyle = MaterialTheme.typography.bodyMedium,
+                versionTextStyle = MaterialTheme.typography.labelMedium,
+                licenseTextStyle = MaterialTheme.typography.labelMedium,
+                descriptionTextStyle = MaterialTheme.typography.bodyMedium,
+                sheetBodyTextStyle = MaterialTheme.typography.bodyLarge,
+            ),
             // The licence text is built in; the web page would need a network the Knob does not offer.
             onActionClick = { library, kind ->
                 if (kind == LibraryActionKind.License) dialog = library
@@ -110,48 +138,36 @@ fun PageContent(page: Page, libraries: suspend () -> String, theme: Theme, onThe
             },
         )
     } else {
-        Document(blocksFor(page))
+        Markdown(
+            textOf(page),
+            // The library's headings default to display sizes, far larger than the page title.
+            typography = markdownTypography(
+                h1 = MaterialTheme.typography.titleLarge,
+                h2 = MaterialTheme.typography.titleMedium,
+                h3 = MaterialTheme.typography.titleSmall,
+                h4 = MaterialTheme.typography.titleSmall,
+                h5 = MaterialTheme.typography.titleSmall,
+                h6 = MaterialTheme.typography.titleSmall,
+            ),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        )
     }
 }
 
-private fun blocksFor(page: Page): List<Block> = when (page) {
-    Page.Card, Page.Settings, Page.Libraries -> emptyList()
-    Page.Help -> blocksOf(HELP)
-    Page.Imprint -> blocksOf(IMPRINT)
-    Page.Privacy -> blocksOf(PRIVACY)
+private fun textOf(page: Page): String = when (page) {
+    Page.Help -> HELP
+    Page.Imprint -> IMPRINT
+    Page.Privacy -> PRIVACY
     // The changelog's own title and preamble repeat what the page title says.
-    Page.Changelog -> blocksOf(CHANGELOG).dropWhile { it !is Block.Heading || it.level != 2 }
-}
-
-/** [blocks] as a scrolling page. */
-@Composable
-fun Document(blocks: List<Block>) {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        for (block in blocks) {
-            when (block) {
-                is Block.Heading -> Text(
-                    block.text,
-                    style = if (block.level <= 2) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-                is Block.Bullet -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("•", style = MaterialTheme.typography.bodyLarge)
-                    Text(block.text, style = MaterialTheme.typography.bodyLarge)
-                }
-                is Block.Paragraph -> Text(block.text, style = MaterialTheme.typography.bodyLarge)
-            }
-        }
-    }
+    Page.Changelog -> CHANGELOG.substring(CHANGELOG.indexOf("\n## ").coerceAtLeast(0))
+    Page.Card, Page.Settings, Page.Libraries -> ""
 }
 
 private const val HELP = """
 ## Connect
 
-On the Knob, open **Card over Wi-Fi**. In the app, choose **Card over Wi-Fi** in the menu and point the camera
-at the code on the Knob's screen; the phone joins the network the Knob offers and shows the card.
+On the Knob, open **Card over Wi-Fi**. In the app, choose **Card over Wi-Fi** in the menu, tap **Scan code**
+and point the camera at the code on the Knob's screen; the phone joins the network the Knob offers and shows the card.
 
 The Knob needs firmware 0.3.3 or later.
 

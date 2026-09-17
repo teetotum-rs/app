@@ -10,6 +10,7 @@ activity-compose = "1.13.0"
 camerax = "1.6.2"
 zxing = "3.5.4"
 aboutlibraries = "15.2.0"
+markdown-renderer = "0.45.0"
 compile-sdk = "37"
 target-sdk = "36"
 min-sdk = "29"
@@ -29,6 +30,7 @@ camerax-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref =
 camerax-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutlibraries" }
+markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "markdown-renderer" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

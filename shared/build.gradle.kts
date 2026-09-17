@@ -47,6 +47,7 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.ktor.client.core)
             implementation(libs.aboutlibraries.compose.m3)
+            implementation(libs.markdown.renderer.m3)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

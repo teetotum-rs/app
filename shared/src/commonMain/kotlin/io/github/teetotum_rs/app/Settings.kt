@@ -28,8 +28,40 @@ import androidx.compose.ui.unit.dp
 /** The app's colours. */
 enum class Theme(val title: String, val detail: String) {
     System("Follow system", "Light or dark, as the phone is set"),
-    Dark("Dark", "GitHub Dark Default"),
+    GitHub("GitHub", "GitHub Light or Dark Default, as the phone is set"),
 }
+
+/** GitHub Light Default, from Primer's github-light-default. */
+private val GitHubLight = lightColorScheme(
+    primary = Color(0xFF0969DA),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFDDF4FF),
+    onPrimaryContainer = Color(0xFF0969DA),
+    inversePrimary = Color(0xFF58A6FF),
+    secondary = Color(0xFF656D76),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFEAEEF2),
+    onSecondaryContainer = Color(0xFF1F2328),
+    background = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF1F2328),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1F2328),
+    surfaceVariant = Color(0xFFF6F8FA),
+    onSurfaceVariant = Color(0xFF656D76),
+    surfaceDim = Color(0xFFEAEEF2),
+    surfaceBright = Color(0xFFFFFFFF),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF6F8FA),
+    surfaceContainer = Color(0xFFF6F8FA),
+    surfaceContainerHigh = Color(0xFFEAEEF2),
+    surfaceContainerHighest = Color(0xFFD0D7DE),
+    inverseSurface = Color(0xFF1F2328),
+    inverseOnSurface = Color(0xFFFFFFFF),
+    error = Color(0xFFCF222E),
+    onError = Color(0xFFFFFFFF),
+    outline = Color(0xFFD0D7DE),
+    outlineVariant = Color(0xFFD0D7DE),
+)
 
 /** GitHub Dark Default, from Primer's github-dark-default. */
 private val GitHubDark = darkColorScheme(
@@ -67,7 +99,7 @@ private val GitHubDark = darkColorScheme(
 @Composable
 fun colorSchemeOf(theme: Theme): ColorScheme = when (theme) {
     Theme.System -> if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
-    Theme.Dark -> GitHubDark
+    Theme.GitHub -> if (isSystemInDarkTheme()) GitHubDark else GitHubLight
 }
 
 /** Settings, grouped in cards. */

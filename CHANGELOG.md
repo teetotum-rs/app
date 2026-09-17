@@ -9,9 +9,14 @@ All notable changes to the app are listed here. The format follows
 ### Added
 
 - A menu, opened from the top left: Card over Wi-Fi, help, imprint, privacy, changelog, the libraries the app uses and exit.
-- Settings, with a theme that follows the system or stays in GitHub's dark colours.
+- Settings, also opened from the top right, with a theme in the system's or GitHub's colours, light
+  or dark as the phone is set.
 - Share files from any app to TeeToTum: they are offered for the folder you open, with the same
   question before replacing.
+
+### Changed
+
+- The camera opens only when you tap Scan code.
 
 ### Fixed
 

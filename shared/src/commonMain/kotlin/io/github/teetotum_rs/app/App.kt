@@ -43,7 +43,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 private sealed interface Stage {
-    data object Scan : Stage
+    /** Waiting for a Knob code; [camera] opens the camera right away. */
+    data class Scan(val camera: Boolean = false) : Stage
     data class Joining(val code: JoinCode) : Stage
     data class Folder(val listing: Listing) : Stage
     data class Failed(val message: String) : Stage
@@ -90,7 +91,7 @@ fun App(
 ) {
     val client = remember { CardClient(httpClient()) }
     val scope = rememberCoroutineScope()
-    var stage by remember { mutableStateOf<Stage>(code?.let { Stage.Joining(it) } ?: Stage.Scan) }
+    var stage by remember { mutableStateOf<Stage>(code?.let { Stage.Joining(it) } ?: Stage.Scan()) }
     var loading by remember { mutableStateOf(false) }
     var transfer by remember { mutableStateOf<Transfer?>(null) }
     var question by remember { mutableStateOf<Question?>(null) }
@@ -214,10 +215,10 @@ fun App(
         ) {
             Surface(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-                    TopBar(page.title, onMenu = { scope.launch { drawer.open() } })
+                    TopBar(page.title, onMenu = { scope.launch { drawer.open() } }, onSettings = { page = Page.Settings })
                     Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                         if (page != Page.Card) PageContent(page, libraries, theme, onTheme) else when (val current = stage) {
-                            Stage.Scan -> ScanScreen(shared, scanner) { stage = Stage.Joining(it) }
+                            is Stage.Scan -> ScanScreen(current.camera, shared, scanner) { stage = Stage.Joining(it) }
                             is Stage.Joining -> {
                                 LaunchedEffect(current) {
                                     try {
@@ -266,7 +267,7 @@ fun App(
                                     }
                                 }
                             }
-                            is Stage.Failed -> Failed(current.message) { stage = Stage.Scan }
+                            is Stage.Failed -> Failed(current.message) { stage = Stage.Scan(camera = true) }
                         }
                     }
                 }
@@ -283,13 +284,15 @@ fun parentOf(path: String): String {
 
 @Composable
 private fun ScanScreen(
+    camera: Boolean,
     shared: Shared?,
     scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
     onCode: (JoinCode) -> Unit,
 ) {
+    var open by remember { mutableStateOf(camera) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            "Open Card over Wi-Fi on the Knob and point the camera at the code on its screen.",
+            "Open Card over Wi-Fi on the Knob, then scan the code on its screen.",
             style = MaterialTheme.typography.bodyLarge,
         )
         if (shared != null && shared.picks.isNotEmpty()) {
@@ -298,7 +301,12 @@ private fun ScanScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-        Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) { scanner(onCode) }
+        if (open) {
+            Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) { scanner(onCode) }
+            OutlinedButton(onClick = { open = false }) { Text("Close camera") }
+        } else {
+            Button(onClick = { open = true }) { Text("Scan code") }
+        }
     }
 }
 

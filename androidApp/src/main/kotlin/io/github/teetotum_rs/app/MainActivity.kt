@@ -42,16 +42,15 @@ class MainActivity : ComponentActivity() {
                 onTheme = {
                     theme = it
                     settings.edit().putString(THEME, it.name).apply()
-                    edgeToEdge()
                 },
             ) { onCode -> Scanner(onCode) }
         }
     }
 
-    /** System bar icons that stand out against the theme: light ones when it is dark. */
+    /** System bar icons that stand out against the phone's mode: light ones when it is dark. */
     private fun edgeToEdge(config: Configuration = resources.configuration) {
         val night = config.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-        val bars = if (theme == Theme.Dark || night) {
+        val bars = if (night) {
             SystemBarStyle.dark(Color.TRANSPARENT)
         } else {
             SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
