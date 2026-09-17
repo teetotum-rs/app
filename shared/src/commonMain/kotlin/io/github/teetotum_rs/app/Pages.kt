@@ -199,48 +199,115 @@ fun PageContent(
             },
         )
     } else {
-        Markdown(
-            textOf(page),
-            // The library's headings default to display sizes, far larger than the page title.
-            typography = markdownTypography(
-                h1 = MaterialTheme.typography.titleLarge,
-                h2 = MaterialTheme.typography.titleMedium,
-                h3 = MaterialTheme.typography.titleSmall,
-                h4 = MaterialTheme.typography.titleSmall,
-                h5 = MaterialTheme.typography.titleSmall,
-                h6 = MaterialTheme.typography.titleSmall,
-            ),
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-        )
+        MarkdownPage(page)
     }
 }
 
 /** A group's page: a card for each page under it, which [onPage] opens. */
 @Composable
 private fun CardsPage(cards: List<Pair<Page, String>>, onPage: (Page) -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    CardColumn {
         for ((card, detail) in cards) {
-            OutlinedCard(onClick = { onPage(card) }, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        AppIcon(card.icon, contentDescription = null)
-                        Text(card.title, style = MaterialTheme.typography.titleMedium)
-                    }
-                    Text(
-                        detail,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            PageCard(card.icon, card.title, onClick = { onPage(card) }) {
+                Text(
+                    detail,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
 }
 
-private fun textOf(page: Page): String = when (page) {
+/** A page written in Markdown: the text before its first `## ` heading, then a card for each such section. */
+@Composable
+private fun MarkdownPage(page: Page) {
+    val (intro, sections) = sectionsOf(textOf(page))
+    CardColumn {
+        if (intro.isNotBlank()) PageMarkdown(intro)
+        for ((title, body) in sections) {
+            PageCard(iconOf(page, title), title) { PageMarkdown(body) }
+        }
+    }
+}
+
+@Composable
+private fun CardColumn(content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) { content() }
+}
+
+/** A card with [icon] and [title] above its [content]; with [onClick], tapping the card calls it. */
+@Composable
+private fun PageCard(icon: ImageVector, title: String, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+    val inner: @Composable () -> Unit = {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                AppIcon(icon, contentDescription = null)
+                Text(title, style = MaterialTheme.typography.titleMedium)
+            }
+            content()
+        }
+    }
+    if (onClick != null) {
+        OutlinedCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) { inner() }
+    } else {
+        OutlinedCard(modifier = Modifier.fillMaxWidth()) { inner() }
+    }
+}
+
+@Composable
+private fun PageMarkdown(text: String) {
+    Markdown(
+        text,
+        // The library's headings default to display sizes, far larger than the page title.
+        typography = markdownTypography(
+            h1 = MaterialTheme.typography.titleLarge,
+            h2 = MaterialTheme.typography.titleMedium,
+            h3 = MaterialTheme.typography.titleSmall,
+            h4 = MaterialTheme.typography.titleSmall,
+            h5 = MaterialTheme.typography.titleSmall,
+            h6 = MaterialTheme.typography.titleSmall,
+        ),
+    )
+}
+
+/** Markdown [text] split at its `## ` headings: the text before the first, then each heading's title and body. */
+internal fun sectionsOf(text: String): Pair<String, List<Pair<String, String>>> {
+    val parts = text.split(Regex("""^## """, RegexOption.MULTILINE))
+    val sections = parts.drop(1).map { part ->
+        // A heading that links, like the changelog's `[0.2.0]`, shows as plain text on its card.
+        val title = part.substringBefore('\n').replace(Regex("""\[([^\]]*)]"""), "$1").trim()
+        title to part.substringAfter('\n', "").trim()
+    }
+    return parts.first().trim() to sections
+}
+
+/** The icon on each card of the Markdown pages, by its heading; every version in the changelog has [ReleaseIcon]. */
+internal val SECTION_ICONS: Map<String, ImageVector> = mapOf(
+    "Getting around" to GettingAroundIcon,
+    "Connect" to ScanIcon,
+    "On the card" to CardIcon,
+    "From other apps" to ShareIcon,
+    "Settings" to SettingsIcon,
+    "About" to AboutIcon,
+    "Provider (§ 5 DDG)" to ProviderIcon,
+    "Contact" to ContactIcon,
+    "The app and the Knob" to CodeIcon,
+    "Liability" to LiabilityIcon,
+    "Links" to LinkIcon,
+    "Last updated" to DateIcon,
+    "Camera" to CameraIcon,
+    "Wi-Fi" to WifiIcon,
+    "Files" to FolderIcon,
+)
+
+private fun iconOf(page: Page, title: String): ImageVector =
+    if (page == Page.Changelog) ReleaseIcon else SECTION_ICONS[title] ?: page.icon
+
+internal fun textOf(page: Page): String = when (page) {
     Page.Help -> HELP
     Page.Imprint -> IMPRINT
     Page.Privacy -> PRIVACY
@@ -248,107 +315,3 @@ private fun textOf(page: Page): String = when (page) {
     Page.Changelog -> CHANGELOG.substring(CHANGELOG.indexOf("\n## ").coerceAtLeast(0))
     Page.Home, Page.Card, Page.About, Page.Settings, Page.Libraries -> ""
 }
-
-private const val HELP = """
-TeeToTum is the phone app for the TeeToTum Knob. It reads the card in the Knob over Wi-Fi: browse
-its folders, download and upload files, make folders and delete.
-
-## Getting around
-
-- The button at the top left opens the menu with every page of the app.
-- **Home** shows a card for each feature, **About** one for each page about the app; tap a card to open it.
-  In the menu their pages sit under them, and the arrow beside each folds them away.
-- The gear at the top right, or **Settings** at the end of the menu, opens the settings.
-- The back gesture leads to the page above: from a page under **About** to **About**, from any other to **Home**.
-
-## Connect
-
-On the Knob, open **Card over Wi-Fi**. In the app, choose **Card over Wi-Fi** on **Home** or in the menu, tap **Scan code**
-and point the camera at the code on the Knob's screen; the phone joins the network the Knob offers and shows the card.
-**Close camera** stops scanning. If joining fails, **Scan again** opens the camera straight away.
-
-The Knob needs firmware 0.3.3 or later.
-
-## On the card
-
-- Tap a folder to open it; **Up** or the back gesture goes to the folder above.
-- Tap a file to download it into `Download/TeeToTum` on the phone.
-- **Upload files** sends files from the phone into the open folder, asking before a file of the same name is replaced.
-- **New folder** makes a folder in the open one.
-- Hold a file or an empty folder to delete it.
-
-## From other apps
-
-Share files to TeeToTum from any app. Once the card shows, they are offered for the folder you
-open: **Send here** uploads them into it, **Cancel** drops them.
-
-## Settings
-
-**Theme** sets the app's colours: the phone's own, GitHub's, or the Knob's red. Each follows the
-phone's light or dark mode.
-
-## About
-
-- **Help** is this page.
-- **Imprint** and **Privacy** say who makes the app and what it does with your data.
-- **Changelog** lists what changed in each version.
-- **Libraries** names the open-source libraries the app is built on, with their licences.
-
-**Exit** at the end of the menu closes the app.
-"""
-
-private const val IMPRINT = """
-## Provider (§ 5 DDG)
-
-Stefan Grühn\
-Sesenheimer Str. 16\
-10627 Berlin\
-Germany
-
-## Contact
-
-Email: <stefan.gruehn@gmail.com>
-
-## The app and the Knob
-
-Stefan Grühn wrote this app. Its source code is at
-[github.com/teetotum-rs/app](https://github.com/teetotum-rs/app), under the MIT or Apache 2.0
-licence, at your choice.
-
-The Knob it talks to runs the TeeToTum firmware, from
-[github.com/teetotum-rs/firmware](https://github.com/teetotum-rs/firmware). Questions and bug
-reports are welcome as issues in either repository.
-
-## Liability
-
-The app is provided as is, without warranty. It reads, writes and deletes files on the Knob's
-card; keep a copy of anything you cannot afford to lose.
-
-## Links
-
-This page links to external websites whose content I have no influence over. The respective
-provider is responsible for that content. No infringements were apparent at the time of linking.
-
-## Last updated
-
-17 September 2026
-"""
-
-private const val PRIVACY = """
-TeeToTum has no account, no ads and no analytics. It sends nothing to its makers or to anyone
-else.
-
-## Camera
-
-The camera only reads the code on the Knob's screen. No picture is stored or sent.
-
-## Wi-Fi
-
-The app joins the network the Knob offers and talks only to the Knob.
-
-## Files
-
-Files you download are saved in `Download/TeeToTum` on the phone. Files you upload or share go
-only to the card in the Knob. Apart from downloads and your settings, the app stores nothing on the
-phone.
-"""

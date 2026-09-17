@@ -6,21 +6,28 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
 }
 
-// CHANGELOG.md, compiled in as the string CHANGELOG so the app shows the changelog of its own build.
-val changelog = tasks.register("generateChangelog") {
-    val source = rootProject.layout.projectDirectory.file("CHANGELOG.md")
-    val output = layout.buildDirectory.dir("generated/changelog/commonMain/kotlin")
-    inputs.file(source)
+// The Markdown pages, compiled in as strings named after their files: src/commonMain/markdown/help.md
+// becomes HELP, and CHANGELOG.md becomes CHANGELOG so the app shows the changelog of its own build.
+val markdown = tasks.register("generateMarkdown") {
+    val changelog = rootProject.layout.projectDirectory.file("CHANGELOG.md")
+    val pages = layout.projectDirectory.dir("src/commonMain/markdown")
+    val output = layout.buildDirectory.dir("generated/markdown/commonMain/kotlin")
+    inputs.file(changelog)
+    inputs.dir(pages)
     outputs.dir(output)
     doLast {
-        val escaped = source.asFile.readText()
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("$", "\\$")
-            .replace("\n", "\\n")
-        val file = output.get().file("io/github/teetotum_rs/app/Changelog.kt").asFile
+        val sources = listOf(changelog.asFile) + pages.asFile.listFiles { f -> f.extension == "md" }!!.sortedBy { it.name }
+        val constants = sources.joinToString("") { source ->
+            val escaped = source.readText()
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("$", "\\$")
+                .replace("\n", "\\n")
+            "\nval ${source.nameWithoutExtension.uppercase()} = \"$escaped\"\n"
+        }
+        val file = output.get().file("io/github/teetotum_rs/app/Markdown.kt").asFile
         file.parentFile.mkdirs()
-        file.writeText("package io.github.teetotum_rs.app\n\nval CHANGELOG = \"$escaped\"\n")
+        file.writeText("package io.github.teetotum_rs.app\n$constants")
     }
 }
 
@@ -36,7 +43,7 @@ kotlin {
 
     sourceSets {
         commonMain {
-            kotlin.srcDir(changelog)
+            kotlin.srcDir(markdown)
         }
         commonMain.dependencies {
             api(libs.compose.runtime)

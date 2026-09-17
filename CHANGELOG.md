@@ -18,6 +18,7 @@ All notable changes to the app are listed here. The format follows
 
 - The back gesture leads to the page above: About from the pages under it, Home from any other.
 - Settings is the last page in the menu, just above Exit.
+- Help, imprint, privacy and changelog show a card with an icon for each section.
 
 ### Fixed
 
