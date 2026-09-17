@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher icon for themed icons: only alpha counts, so the segments keep their three shades as
+     opacities, and the gaps, the face and the room around the T stay clear. Same canvas as the foreground. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.144" android:scaleY="0.144" android:translateX="18" android:translateY="18">
+        <path android:strokeColor="#fff" android:strokeWidth="12"
+            android:pathData="M34,250 A216,216 0 1 1 466,250 A216,216 0 1 1 34,250Z" />
+        <path android:fillColor="#fff" android:fillAlpha="1" android:pathData="M200.1,50.1 A206,206 0 0 1 299.9,50.1 L282.8,113.9 A140,140 0 0 0 217.2,113.9Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.7" android:pathData="M306.7,52 A206,206 0 0 1 393.2,101.9 L346.5,148.6 A140,140 0 0 0 289.6,115.7Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.7" android:pathData="M398.1,106.8 A206,206 0 0 1 448,193.3 L384.3,210.4 A140,140 0 0 0 351.4,153.5Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.7" android:pathData="M449.9,200.1 A206,206 0 0 1 449.9,299.9 L386.1,282.8 A140,140 0 0 0 386.1,217.2Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.4" android:pathData="M448,306.7 A206,206 0 0 1 398.1,393.2 L351.4,346.5 A140,140 0 0 0 384.3,289.6Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.4" android:pathData="M393.2,398.1 A206,206 0 0 1 306.7,448 L289.6,384.3 A140,140 0 0 0 346.5,351.4Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.4" android:pathData="M299.9,449.9 A206,206 0 0 1 200.1,449.9 L217.2,386.1 A140,140 0 0 0 282.8,386.1Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.4" android:pathData="M193.3,448 A206,206 0 0 1 106.8,398.1 L153.5,351.4 A140,140 0 0 0 210.4,384.3Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.4" android:pathData="M101.9,393.2 A206,206 0 0 1 52,306.7 L115.7,289.6 A140,140 0 0 0 148.6,346.5Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.4" android:pathData="M50.1,299.9 A206,206 0 0 1 50.1,200.1 L113.9,217.2 A140,140 0 0 0 113.9,282.8Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.7" android:pathData="M52,193.3 A206,206 0 0 1 101.9,106.8 L148.6,153.5 A140,140 0 0 0 115.7,210.4Z" />
+        <path android:fillColor="#fff" android:fillAlpha="0.7" android:pathData="M106.8,101.9 A206,206 0 0 1 193.3,52 L210.4,115.7 A140,140 0 0 0 153.5,148.6Z" />
+        <path android:fillColor="#fff" android:pathData="M170,168 h160 v40 h-60 v128 h-40 v-128 h-60z" />
+    </group>
+</vector>
