@@ -38,11 +38,21 @@ fun unsignedOf(bytes: ByteArray): Long =
 fun firmwareText(version: String?): String =
     version ?: "Older than 0.3.4, the first firmware to report its version here."
 
-/** The Knob's card as a line to show: its size in decimal gigabytes, as cards are sold, or why there is none. */
+/**
+ * The Knob's card as a line to show, or why there is none: its size in decimal gigabytes, as cards
+ * are sold, to three significant digits and cut rather than rounded, as the Knob shows it.
+ */
 fun cardText(bytes: Long?): String = when (bytes) {
     null -> "Needs firmware 0.3.4 or later."
     0L -> "No card in the Knob."
-    else -> (bytes / 100_000_000).let { tenths -> "${tenths / 10}.${tenths % 10} GB" }
+    else -> (bytes / 1_000_000).let { mb ->
+        when {
+            mb < 1_000 -> "0.${mb.toString().padStart(3, '0')} GB"
+            mb < 10_000 -> "${mb / 1_000}.${(mb / 10 % 100).toString().padStart(2, '0')} GB"
+            mb < 100_000 -> "${mb / 1_000}.${mb / 100 % 10} GB"
+            else -> "${mb / 1_000} GB"
+        }
+    }
 }
 
 /** A duration in its two largest units, such as `2 d 5 h`, `3 min 12 s` or `45 s`. */
