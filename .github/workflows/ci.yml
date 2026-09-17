@@ -14,7 +14,10 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 17
+          # 17 compiles (jvmToolchain), 25 runs the Gradle daemon (gradle-daemon-jvm.properties).
+          java-version: |
+            17
+            25
       - uses: gradle/actions/setup-gradle@v5
       # The release APK is built unsigned here: it proves R8 still gets through the code.
       - name: Test and build
