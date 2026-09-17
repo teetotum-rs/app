@@ -6,6 +6,20 @@ All notable changes to the app are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Home, the first page in the menu and the one the app opens on, with a card for each feature.
+- Corner marks on the camera frame show how large the code should appear.
+
+### Changed
+
+- The back gesture leads to Home instead of Card over Wi-Fi.
+
+### Fixed
+
+- In landscape the camera stays square and **Close camera** sits beside it instead of off screen.
+- Turning the phone no longer closes the camera.
+
 ## [0.2.0] - 2026-09-17
 
 ### Added

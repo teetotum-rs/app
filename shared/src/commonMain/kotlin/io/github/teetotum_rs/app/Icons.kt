@@ -31,6 +31,9 @@ val MenuIcon: ImageVector = symbol("menu", "M120-240v-80h720v80H120Zm0-200v-80h7
 /** Material Symbol `close`: closes the menu. */
 val CloseIcon: ImageVector = symbol("close", "m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z")
 
+/** Material Symbol `home`: home. */
+val HomeIcon: ImageVector = symbol("home", "M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z")
+
 /** Material Symbol `wifi`: Card over Wi-Fi. */
 val WifiIcon: ImageVector = symbol("wifi", "M409-149q-29-29-29-71t29-71q29-29 71-29t71 29q29 29 29 71t-29 71q-29 29-71 29t-71-29ZM254-346l-84-86q59-59 138.5-93.5T480-560q92 0 171.5 35T790-430l-84 84q-44-44-102-69t-124-25q-66 0-124 25t-102 69ZM84-516 0-600q92-94 215-147t265-53q142 0 265 53t215 147l-84 84q-77-77-178.5-120.5T480-680q-116 0-217.5 43.5T84-516Z")
 

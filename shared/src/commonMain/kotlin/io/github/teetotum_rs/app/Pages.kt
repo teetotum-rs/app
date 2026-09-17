@@ -1,5 +1,6 @@
 package io.github.teetotum_rs.app
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +17,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,8 +38,9 @@ import com.mikepenz.aboutlibraries.ui.compose.produceLibraries
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
 
-/** What the app shows: the card, or one of the pages from the menu. */
+/** What the app shows: home, the card, or one of the pages from the menu. */
 enum class Page(val title: String, val icon: ImageVector) {
+    Home("Home", HomeIcon),
     Card("Card over Wi-Fi", WifiIcon),
     Settings("Settings", SettingsIcon),
     Help("Help", HelpIcon),
@@ -105,12 +108,20 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
 
 /**
  * A page from the menu other than [Page.Card]; [libraries] reads the list for [Page.Libraries],
- * [theme] and [onTheme] are the setting shown on [Page.Settings].
+ * [theme] and [onTheme] are the setting shown on [Page.Settings], [onPage] opens a feature from [Page.Home].
  */
 @OptIn(ExperimentalMaterial3Api::class) // LibrariesContainer's overload with its own dialog state
 @Composable
-fun PageContent(page: Page, libraries: suspend () -> String, theme: Theme, onTheme: (Theme) -> Unit) {
-    if (page == Page.Settings) {
+fun PageContent(
+    page: Page,
+    libraries: suspend () -> String,
+    theme: Theme,
+    onTheme: (Theme) -> Unit,
+    onPage: (Page) -> Unit,
+) {
+    if (page == Page.Home) {
+        HomePage(onPage)
+    } else if (page == Page.Settings) {
         SettingsPage(theme, onTheme)
     } else if (page == Page.Libraries) {
         val listed by produceLibraries { libraries() }
@@ -155,13 +166,43 @@ fun PageContent(page: Page, libraries: suspend () -> String, theme: Theme, onThe
     }
 }
 
+/** The features of the app, one card each. */
+private val FEATURES = listOf(
+    Page.Card to "Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.",
+)
+
+/** The start page: a card for every feature, which [onPage] opens. */
+@Composable
+private fun HomePage(onPage: (Page) -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        for ((feature, detail) in FEATURES) {
+            OutlinedCard(onClick = { onPage(feature) }, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        AppIcon(feature.icon, contentDescription = null)
+                        Text(feature.title, style = MaterialTheme.typography.titleMedium)
+                    }
+                    Text(
+                        detail,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
 private fun textOf(page: Page): String = when (page) {
     Page.Help -> HELP
     Page.Imprint -> IMPRINT
     Page.Privacy -> PRIVACY
     // The changelog's own title and preamble repeat what the page title says.
     Page.Changelog -> CHANGELOG.substring(CHANGELOG.indexOf("\n## ").coerceAtLeast(0))
-    Page.Card, Page.Settings, Page.Libraries -> ""
+    Page.Home, Page.Card, Page.Settings, Page.Libraries -> ""
 }
 
 private const val HELP = """
@@ -172,11 +213,12 @@ its folders, download and upload files, make folders and delete.
 
 - The button at the top left opens the menu with every page of the app.
 - The gear at the top right opens the settings.
-- The back gesture leads from any other page back to **Card over Wi-Fi**.
+- **Home** shows a card for each feature; tap one to open it.
+- The back gesture leads from any other page back to **Home**.
 
 ## Connect
 
-On the Knob, open **Card over Wi-Fi**. In the app, choose **Card over Wi-Fi** in the menu, tap **Scan code**
+On the Knob, open **Card over Wi-Fi**. In the app, choose **Card over Wi-Fi** on **Home** or in the menu, tap **Scan code**
 and point the camera at the code on the Knob's screen; the phone joins the network the Knob offers and shows the card.
 **Close camera** stops scanning. If joining fails, **Scan again** opens the camera straight away.
 

@@ -1,8 +1,10 @@
 package io.github.teetotum_rs.app
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -30,12 +32,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.math.sqrt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -92,7 +98,7 @@ fun App(
     var loading by remember { mutableStateOf(false) }
     var transfer by remember { mutableStateOf<Transfer?>(null) }
     var question by remember { mutableStateOf<Question?>(null) }
-    var page by remember { mutableStateOf(Page.Card) }
+    var page by remember { mutableStateOf(if (code != null || shared != null) Page.Card else Page.Home) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val busy = loading || transfer?.let { it.result == null } == true
 
@@ -187,10 +193,13 @@ fun App(
 
     val folder = stage as? Stage.Folder
     val pick = picker { picks -> send(picks, fromShare = false) }
-    back(folder != null && folder.listing.path != "/" && !busy) {
+    // The handler registered last wins: going up a folder comes before going home.
+    back(page != Page.Home) { page = Page.Home }
+    back(page == Page.Card && folder != null && folder.listing.path != "/" && !busy) {
         folder?.let { open(parentOf(it.listing.path)) }
     }
-    back(page != Page.Card) { page = Page.Card }
+    // Files shared from another app are sent from the card.
+    LaunchedEffect(shared) { if (shared != null) page = Page.Card }
 
     MaterialTheme(colorScheme = colorSchemeOf(theme)) {
         ModalNavigationDrawer(
@@ -214,7 +223,7 @@ fun App(
                 Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                     TopBar(page.title, onMenu = { scope.launch { drawer.open() } }, onSettings = { page = Page.Settings })
                     Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
-                        if (page != Page.Card) PageContent(page, libraries, theme, onTheme) else when (val current = stage) {
+                        if (page != Page.Card) PageContent(page, libraries, theme, onTheme, onPage = { page = it }) else when (val current = stage) {
                             is Stage.Scan -> ScanScreen(current.camera, shared, scanner) { stage = Stage.Joining(it) }
                             is Stage.Joining -> {
                                 LaunchedEffect(current) {
@@ -286,23 +295,60 @@ private fun ScanScreen(
     scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
     onCode: (JoinCode) -> Unit,
 ) {
-    var open by remember { mutableStateOf(camera) }
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(
-            "Open Card over Wi-Fi on the Knob, then scan the code on its screen.",
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        if (shared != null && shared.picks.isNotEmpty()) {
+    var open by rememberSaveable { mutableStateOf(camera) }
+    BoxWithConstraints {
+        val wide = maxWidth > maxHeight
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                "${filesText(shared.picks.size)} to send; you choose the folder once the card shows.",
-                style = MaterialTheme.typography.bodyMedium,
+                "Open Card over Wi-Fi on the Knob, then scan the code on its screen.",
+                style = MaterialTheme.typography.bodyLarge,
             )
+            if (shared != null && shared.picks.isNotEmpty()) {
+                Text(
+                    "${filesText(shared.picks.size)} to send; you choose the folder once the card shows.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            if (open && wide) {
+                // Landscape: button beside the image, the square as tall as the remaining height.
+                Row(modifier = Modifier.weight(1f, fill = false), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Viewfinder(Modifier.aspectRatio(1f, matchHeightConstraintsFirst = true), scanner, onCode)
+                    ActionButton("Close camera", onClick = { open = false }, filled = false)
+                }
+            } else if (open) {
+                // Square on the shorter free side, so the button below always stays on screen.
+                Viewfinder(Modifier.weight(1f, fill = false).aspectRatio(1f, matchHeightConstraintsFirst = true), scanner, onCode)
+                ActionButton("Close camera", onClick = { open = false }, filled = false)
+            } else {
+                ActionButton("Scan code", onClick = { open = true })
+            }
         }
-        if (open) {
-            Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) { scanner(onCode) }
-            ActionButton("Close camera", onClick = { open = false }, filled = false)
-        } else {
-            ActionButton("Scan code", onClick = { open = true })
+    }
+}
+
+/** The camera with corner marks around its middle half, a hint at how large the code should appear. */
+@Composable
+private fun Viewfinder(
+    modifier: Modifier,
+    scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
+    onCode: (JoinCode) -> Unit,
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    Box(modifier = modifier) {
+        scanner(onCode)
+        Canvas(modifier = Modifier.matchParentSize()) {
+            // A square of side 1/√2 covers half the image.
+            val side = size.minDimension / sqrt(2f)
+            val arm = side / 8
+            val stroke = 4.dp.toPx()
+            val left = (size.width - side) / 2
+            val top = (size.height - side) / 2
+            for ((x, dx) in listOf(left to 1f, left + side to -1f)) {
+                for ((y, dy) in listOf(top to 1f, top + side to -1f)) {
+                    drawLine(accent, Offset(x, y), Offset(x + dx * arm, y), stroke, StrokeCap.Round)
+                    drawLine(accent, Offset(x, y), Offset(x, y + dy * arm), stroke, StrokeCap.Round)
+                }
+            }
         }
     }
 }
