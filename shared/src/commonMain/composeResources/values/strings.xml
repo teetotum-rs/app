@@ -162,10 +162,12 @@
     <string name="bluetooth_error_refused_plugin">The Knob refused the plugin.</string>
     <string name="bluetooth_error_no_plugin_list">This Knob does not list its plugins over Bluetooth. Update its firmware.</string>
     <string name="bluetooth_error_refused_delete">The Knob refused to delete the plugin.</string>
+    <string name="bluetooth_error_not_paired">The Knob was not paired. Accept the phone's pairing request, then try again.</string>
+    <string name="bluetooth_error_bond_lost">The Knob no longer knows this phone. Remove the Knob in the phone's Bluetooth settings, then try again.</string>
     <string name="bluetooth_error_plugin_entry">The Knob sent a plugin entry this app cannot read.</string>
 
     <!-- Plugins over Bluetooth -->
-    <string name="plugins_intro">Open Settings &gt; Receive on the Knob, then send a plugin. The Knob restarts and asks you to install it.</string>
+    <string name="plugins_intro">Open Settings &gt; Receive on the Knob, then send a plugin. The Knob restarts and asks you to install it. The first time, the phone asks to pair with the Knob.</string>
     <string name="plugins_send">Send to Knob</string>
     <string name="plugins_own">Your own plugin</string>
     <string name="plugins_own_hint">A plugin you built and signed yourself, as a .wasm file.</string>

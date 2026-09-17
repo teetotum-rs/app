@@ -14,7 +14,10 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.ParcelUuid
 import kotlinx.coroutines.TimeoutCancellationException
@@ -62,6 +65,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
             throw BluetoothFailed(Res.string.bluetooth_error_no_plugins)
         }
         subscribe(status)
+        bond()
         if (!write(control, byteArrayOf(PluginService.BEGIN) + header)) {
             throw BluetoothFailed(Res.string.bluetooth_error_refused_begin)
         }
@@ -114,6 +118,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         val status = service.characteristic(PluginService.STATUS)
         if (control == null || status == null) throw BluetoothFailed(Res.string.bluetooth_error_no_plugins)
         subscribe(status)
+        bond()
         when (writeStatus(control, byteArrayOf(PluginService.DELETE, slot.toByte()))) {
             BluetoothGatt.GATT_SUCCESS -> awaitStatus(PluginService.DELETED)
 
@@ -133,7 +138,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         } catch (_: TimeoutCancellationException) {
             throw BluetoothFailed(Res.string.bluetooth_error_out_of_range)
         }
-        val session = Session()
+        val session = Session(device)
         val gatt = device.connectGatt(context, false, session.callback, BluetoothDevice.TRANSPORT_LE)
             ?: throw BluetoothFailed(Res.string.bluetooth_error_connect)
         session.gatt = gatt
@@ -145,6 +150,44 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         } finally {
             gatt.disconnect()
             gatt.close()
+        }
+    }
+
+    /**
+     * Pairs with the Knob unless the phone already has. The Knob takes plugins and deletions only
+     * over an encrypted link, which needs the bond; the phone asks the user once.
+     */
+    private suspend fun Session.bond() {
+        if (device.bondState == BluetoothDevice.BOND_BONDED) return
+        val bonded = try {
+            withTimeout(BOND_TIMEOUT_MS) { awaitBond(device) }
+        } catch (_: TimeoutCancellationException) {
+            false
+        }
+        if (!bonded) throw BluetoothFailed(Res.string.bluetooth_error_not_paired)
+    }
+
+    /** Starts pairing with [device] and waits until it is bonded (true) or pairing failed (false). */
+    private suspend fun awaitBond(device: BluetoothDevice): Boolean = suspendCancellableCoroutine { continuation ->
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                // Asked of the device rather than read from the extras, which any app could send.
+                when (device.bondState) {
+                    BluetoothDevice.BOND_BONDED -> finish(true)
+                    BluetoothDevice.BOND_NONE -> finish(false)
+                }
+            }
+
+            fun finish(bonded: Boolean) {
+                runCatching { context.unregisterReceiver(this) }
+                if (continuation.isActive) continuation.resume(bonded)
+            }
+        }
+        // A protected system broadcast, which needs no export flag.
+        context.registerReceiver(receiver, IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED))
+        continuation.invokeOnCancellation { runCatching { context.unregisterReceiver(receiver) } }
+        if (!device.createBond() && device.bondState != BluetoothDevice.BOND_BONDING) {
+            receiver.finish(device.bondState == BluetoothDevice.BOND_BONDED)
         }
     }
 
@@ -177,7 +220,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         }
 
     /** One connection: the GATT callbacks arrive as [events], the plugin status notifications as [statuses]. */
-    private class Session {
+    private class Session(val device: BluetoothDevice) {
         lateinit var gatt: BluetoothGatt
         val events = Channel<Event>(Channel.UNLIMITED)
         val statuses = Channel<ByteArray>(Channel.UNLIMITED)
@@ -287,7 +330,13 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
                 }
             }
             if (!started) throw BluetoothFailed(Res.string.bluetooth_error_write)
-            return expect<Event.Written>().status
+            return when (val status = expect<Event.Written>().status) {
+                // Bonded on the phone, but the Knob has since bonded with another device or forgotten this one.
+                BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION, BluetoothGatt.GATT_INSUFFICIENT_ENCRYPTION ->
+                    throw BluetoothFailed(Res.string.bluetooth_error_bond_lost)
+
+                else -> status
+            }
         }
 
         /** The MTU the Knob agrees to, at most [mtu]. */
@@ -349,6 +398,9 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         const val SCAN_TIMEOUT_MS = 10_000L
         const val STEP_TIMEOUT_MS = 15_000L
         const val ABORT_TIMEOUT_MS = 2_000L
+
+        /** Long enough for the user to find and accept the phone's pairing request. */
+        const val BOND_TIMEOUT_MS = 60_000L
 
         /** The ATT MTU the Knob's packet pool allows. */
         const val MTU = 247
