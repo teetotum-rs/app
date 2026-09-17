@@ -126,6 +126,7 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
                 uptimeSeconds = number(KnobService.UPTIME),
                 networks = number(KnobService.NETWORKS).toInt(),
                 version = bytes(KnobService.VERSION)?.decodeToString(),
+                cardBytes = bytes(KnobService.CARD_BYTES)?.let(::unsignedOf),
             )
         } finally {
             gatt.disconnect()

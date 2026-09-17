@@ -37,6 +37,7 @@ fun StatusPage(bluetooth: Bluetooth, access: @Composable (content: @Composable (
 private fun StatusCards(status: KnobStatus, onRead: () -> Unit) {
     CardColumn {
         PageCard(ReleaseIcon, "Firmware") { StatusValue(firmwareText(status.version)) }
+        PageCard(CardIcon, "Card") { StatusValue(cardText(status.cardBytes)) }
         PageCard(TimerIcon, "Running for") { StatusValue(uptimeText(status.uptimeSeconds)) }
         PageCard(WifiIcon, "Wi-Fi networks nearby") { StatusValue(status.networks.toString()) }
         ActionButton("Read again", onClick = onRead)

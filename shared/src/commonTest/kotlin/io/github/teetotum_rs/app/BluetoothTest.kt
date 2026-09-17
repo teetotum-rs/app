@@ -21,4 +21,11 @@ class BluetoothTest {
         assertEquals("1 h 1 min", uptimeText(3_660))
         assertEquals("2 d 5 h", uptimeText(2 * 86_400 + 5 * 3_600 + 7))
     }
+
+    @Test
+    fun showsTheCardInDecimalGigabytes() {
+        assertEquals("15.9 GB", cardText(15_931_539_456))
+        assertEquals("No card in the Knob.", cardText(0))
+        assertEquals("Needs firmware 0.3.4 or later.", cardText(null))
+    }
 }

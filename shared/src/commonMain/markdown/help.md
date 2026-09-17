@@ -20,8 +20,8 @@ The Knob needs firmware 0.3.3 or later.
 ## Status over Bluetooth
 
 Choose **Status over Bluetooth** on **Home** or in the menu. The app asks for Bluetooth, finds the
-Knob nearby and shows how long it has run and how many Wi-Fi networks it sees; **Read again**
-fetches both anew. The Knob's screen can show anything meanwhile.
+Knob nearby and shows its firmware, the size of its card, how long it has run and how many Wi-Fi
+networks it sees; **Read again** fetches them anew. The Knob's screen can show anything meanwhile.
 
 ## On the card
 
