@@ -16,6 +16,7 @@ All notable changes to the app are listed here. The format follows
 - Settings show an icon before each card and setting title.
 - Corner marks on the camera frame show how large the code should appear.
 - A monochrome launcher icon, for phones set to themed icons.
+- Plugins over Bluetooth sends a plugin from the catalogue, or a signed `.wasm` file of your own, to the Knob.
 
 ### Changed
 

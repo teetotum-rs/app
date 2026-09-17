@@ -45,6 +45,7 @@ enum class Page(val title: String, val icon: ImageVector) {
     Home("Home", HomeIcon),
     Card("Card over Wi-Fi", WifiIcon),
     Status("Status over Bluetooth", BluetoothIcon),
+    Plugins("Plugins over Bluetooth", PluginIcon),
     About("About", AboutIcon),
     Help("Help", HelpIcon),
     Imprint("Imprint", ImprintIcon),
@@ -60,6 +61,7 @@ private val GROUPS: Map<Page, List<Pair<Page, String>>> = mapOf(
         Page.Card to "Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.",
         Page.Status to
             "See over Bluetooth the Knob's firmware, card, how long it has run and how many Wi-Fi networks it sees.",
+        Page.Plugins to "Send plugins to the Knob over Bluetooth, from the catalogue or your own.",
     ),
     Page.About to listOf(
         Page.Help to "How to use the app, page by page.",
@@ -316,6 +318,8 @@ internal val SECTION_ICONS: Map<String, ImageVector> = mapOf(
     "Wi-Fi" to WifiIcon,
     "Bluetooth" to BluetoothIcon,
     "Status over Bluetooth" to BluetoothIcon,
+    "Plugins over Bluetooth" to PluginIcon,
+    "Plugins" to PluginIcon,
     "Files" to FolderIcon,
 )
 
@@ -332,5 +336,5 @@ internal fun textOf(page: Page): String = when (page) {
     // The changelog's own title and preamble repeat what the page title says.
     Page.Changelog -> CHANGELOG.substring(CHANGELOG.indexOf("\n## ").coerceAtLeast(0))
 
-    Page.Home, Page.Card, Page.Status, Page.About, Page.Settings, Page.Libraries -> ""
+    Page.Home, Page.Card, Page.Status, Page.Plugins, Page.About, Page.Settings, Page.Libraries -> ""
 }

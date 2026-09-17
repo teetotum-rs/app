@@ -31,6 +31,13 @@ Knob nearby and shows its firmware, the size of its card, how long it has run an
 networks it sees. **Read at** is the phone's date and time of that reading, since the Knob has no clock;
 **Read again** fetches everything anew. The Knob's screen can show anything meanwhile.
 
+## Plugins over Bluetooth
+
+Choose **Plugins over Bluetooth** on **Home** or in the menu. The page lists the plugins in the catalogue;
+**Your own plugin** at the end takes a signed `.wasm` file from the phone with **Choose file**. On the
+Knob, open **Settings > Receive**, then tap **Send to Knob**. The app checks the plugin and shows how
+much is sent; the Knob restarts and asks whether to install it.
+
 ## On the card
 
 - Tap a folder to open it; **Up** or the back gesture goes to the folder above.

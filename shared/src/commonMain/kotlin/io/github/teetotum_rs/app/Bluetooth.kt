@@ -1,9 +1,15 @@
 package io.github.teetotum_rs.app
 
-/** Reads what the Knob in Bluetooth range reports about itself. */
+/** Talks to the Knob in Bluetooth range. */
 interface Bluetooth {
     /** Finds the Knob, reads its status and lets it go again; throws [BluetoothFailed] when it cannot. */
     suspend fun status(): KnobStatus
+
+    /**
+     * Sends a plugin [module] with its slot [header] to the Knob while its Settings > Receive is open;
+     * [progress] hears the module bytes sent. Throws [BluetoothFailed] when it cannot.
+     */
+    suspend fun sendPlugin(module: ByteArray, header: ByteArray, progress: (sent: Int) -> Unit)
 }
 
 class BluetoothFailed(message: String) : Exception(message)
