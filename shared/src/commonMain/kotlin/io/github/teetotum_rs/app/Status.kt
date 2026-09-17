@@ -10,7 +10,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
-/** The Knob's status over [bluetooth], read when the page opens and again on request; [access] asks for Bluetooth first. */
+/**
+ * The Knob's status over [bluetooth], read when the page opens and again on request; [access] asks for
+ * Bluetooth first.
+ */
 @Composable
 fun StatusPage(bluetooth: Bluetooth, access: @Composable (content: @Composable () -> Unit) -> Unit) {
     access {

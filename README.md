@@ -30,7 +30,10 @@ JDK 17 or later and the Android SDK (API 37). Point `local.properties` at the SD
 ./gradlew :shared:testAndroidHostTest   # unit tests
 ./gradlew :androidApp:installDebug      # build and install on a connected phone
 ./gradlew :androidApp:assembleRelease   # shrunk with R8, unsigned unless a key is given
+./gradlew detekt :androidApp:lintDebug  # linters, as CI runs them; --auto-correct fixes formatting
 ```
+
+`git config core.hooksPath tools/hooks` runs the linters before every push.
 
 A signed release build reads its key from the environment: `TEETOTUM_APP_KEYSTORE` (a PKCS12
 file), `TEETOTUM_APP_KEYSTORE_PASSWORD` and `TEETOTUM_APP_KEY_ALIAS`. Pushing a tag `vX.Y.Z` that

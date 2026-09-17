@@ -1,0 +1,35 @@
+# Deviations from detekt's defaults, each with its reason.
+
+naming:
+  # The package follows the application ID, and a Kotlin package cannot carry the hyphen of teetotum-rs.
+  PackageNaming:
+    active: false
+  # Composables are named like types.
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+  # Files are named after their topic, not after the one class they happen to hold.
+  MatchingDeclarationName:
+    active: false
+
+ktlint:
+  # Same as naming>PackageNaming.
+  PackageName:
+    active: false
+  # Duplicates style>MaxLineLength, which honours @Suppress("MaxLineLength").
+  MaximumLineLength:
+    active: false
+
+style:
+  # Bit shifts, decimal digits, dp and seconds read better as they are than behind a name.
+  MagicNumber:
+    active: false
+  # Guard clauses return or throw early by design.
+  ReturnCount:
+    active: false
+  ThrowsCount:
+    active: false
+
+Compose:
+  # Screens of one app, laid out by their caller, not a component library.
+  ModifierMissing:
+    active: false

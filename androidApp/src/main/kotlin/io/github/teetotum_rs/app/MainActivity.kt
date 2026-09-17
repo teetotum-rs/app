@@ -5,14 +5,15 @@ import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
-import androidx.activity.SystemBarStyle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
     private lateinit var radio: AndroidRadio
@@ -34,17 +35,17 @@ class MainActivity : ComponentActivity() {
                 downloads,
                 bluetooth,
                 bluetoothAccess = { content -> BluetoothAccess(content) },
-                debugCode(),
-                picker = { onPicked -> rememberPicker(onPicked) },
+                picker = { onPick -> rememberPicker(onPick) },
                 back = { enabled, onBack -> BackHandler(enabled, onBack) },
+                code = debugCode(),
                 shared = shared,
-                onShared = { shared = null },
+                onShareEnd = { shared = null },
                 onExit = { finish() },
                 libraries = { resources.openRawResource(R.raw.aboutlibraries).bufferedReader().use { it.readText() } },
                 theme = theme,
                 onTheme = {
                     theme = it
-                    settings.edit().putString(THEME, it.name).apply()
+                    settings.edit { putString(THEME, it.name) }
                 },
             ) { onCode -> Scanner(onCode) }
         }

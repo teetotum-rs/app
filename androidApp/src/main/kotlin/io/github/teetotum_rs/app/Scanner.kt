@@ -107,7 +107,14 @@ private fun decode(reader: QRCodeReader, image: ImageProxy): JoinCode? {
     val luma = ByteArray(buffer.remaining()).also { buffer.get(it) }
     val rows = luma.size / plane.rowStride + if (luma.size % plane.rowStride == 0) 0 else 1
     val source = PlanarYUVLuminanceSource(
-        luma, plane.rowStride, rows, 0, 0, image.width, image.height, false,
+        luma,
+        plane.rowStride,
+        rows,
+        0,
+        0,
+        image.width,
+        image.height,
+        false,
     )
     return try {
         JoinCode.parse(reader.decode(BinaryBitmap(HybridBinarizer(source)), HINTS).text)

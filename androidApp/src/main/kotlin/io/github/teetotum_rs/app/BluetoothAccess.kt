@@ -31,7 +31,9 @@ fun BluetoothAccess(content: @Composable () -> Unit) {
         }
     }
     var allowed by remember {
-        mutableStateOf(needed.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED })
+        mutableStateOf(
+            needed.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED },
+        )
     }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
         allowed = granted.values.all { it }

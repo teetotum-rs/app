@@ -35,7 +35,9 @@ class CardException(message: String) : Exception(message)
 class CardClient(private val http: HttpClient, private val base: String = KNOB_URL) {
     /** The folder at [path], `/` or `/NAME/SUB/`. */
     suspend fun list(path: String): Listing {
-        val response = http.get(url(path, folder = true)) { header(HttpHeaders.Accept, ContentType.Application.Json.toString()) }
+        val response = http.get(url(path, folder = true)) {
+            header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+        }
         if (!response.status.isSuccess()) {
             throw CardException("The Knob answered ${response.status.value} for $path.")
         }
@@ -51,6 +53,7 @@ class CardClient(private val http: HttpClient, private val base: String = KNOB_U
     }
 
     /** Copies the file at [path] into [sink], reporting bytes done and the total the Knob announced. */
+    @Suppress("TooGenericExceptionCaught") // Aborts the sink on any failure, then rethrows.
     suspend fun download(path: String, sink: FileSink, progress: (done: Long, total: Long?) -> Unit): String =
         http.prepareGet(url(path, folder = false)).execute { response ->
             if (!response.status.isSuccess()) {
@@ -121,7 +124,10 @@ class CardClient(private val http: HttpClient, private val base: String = KNOB_U
 
     /** Removes the file or empty folder [path]. */
     suspend fun delete(path: String) {
-        check(http.request(url(path, folder = false)) { method = HttpMethod.Delete }, path.trimEnd('/').substringAfterLast('/'))
+        check(
+            http.request(url(path, folder = false)) { method = HttpMethod.Delete },
+            path.trimEnd('/').substringAfterLast('/'),
+        )
     }
 
     /** Throws the Knob's own sentence, "the folder is not empty", when it refused. */

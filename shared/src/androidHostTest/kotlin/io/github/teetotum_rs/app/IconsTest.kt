@@ -17,6 +17,9 @@ class IconsTest {
                 .filter { (_, line) -> material.containsMatchIn(line) }
                 .map { (index, line) -> "${file.path}:${index + 1}: ${line.trim()}" }
         }
-        assertEquals(listOf("src/commonMain/kotlin/io/github/teetotum_rs/app/Icons.kt"), found.map { it.substringBefore(':') })
+        assertEquals(
+            listOf("src/commonMain/kotlin/io/github/teetotum_rs/app/Icons.kt"),
+            found.map { it.substringBefore(':') },
+        )
     }
 }

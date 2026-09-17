@@ -48,9 +48,8 @@ data class FirmwareVersion(val major: Int, val minor: Int, val patch: Int) : Com
         private val pattern = Regex("""^v(\d+)\.(\d+)\.(\d+)""")
 
         /** The release in a firmware's version text, or null for a development build. */
-        fun parse(text: String): FirmwareVersion? =
-            pattern.find(text)?.destructured?.let { (major, minor, patch) ->
-                FirmwareVersion(major.toInt(), minor.toInt(), patch.toInt())
-            }
+        fun parse(text: String): FirmwareVersion? = pattern.find(text)?.destructured?.let { (major, minor, patch) ->
+            FirmwareVersion(major.toInt(), minor.toInt(), patch.toInt())
+        }
     }
 }

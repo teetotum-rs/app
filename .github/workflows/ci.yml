@@ -19,6 +19,8 @@ jobs:
             17
             25
       - uses: gradle/actions/setup-gradle@v5
+      - name: Lint
+        run: ./gradlew --console=plain detekt :androidApp:lintDebug
       # The release APK is built unsigned here: it proves R8 still gets through the code.
       - name: Test and build
         run: ./gradlew --console=plain :shared:testAndroidHostTest :androidApp:assembleDebug :androidApp:assembleRelease

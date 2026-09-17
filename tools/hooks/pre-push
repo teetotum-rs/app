@@ -1,0 +1,9 @@
+#!/bin/sh
+# Refuses a push that fails detekt or Android Lint, the same checks CI runs.
+#
+#     git config core.hooksPath tools/hooks
+#
+# `git push --no-verify` skips it.
+set -eu
+cd "$(git rev-parse --show-toplevel)"
+./gradlew --console=plain --quiet detekt :androidApp:lintDebug

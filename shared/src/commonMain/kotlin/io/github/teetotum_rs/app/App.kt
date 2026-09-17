@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package io.github.teetotum_rs.app
 
 import androidx.compose.foundation.Canvas
@@ -41,9 +43,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlin.math.sqrt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlin.math.sqrt
 
 private sealed interface Stage {
     /** Waiting for a Knob code; [camera] opens the camera right away. */
@@ -61,12 +63,7 @@ private sealed interface Question {
 }
 
 /** A download or upload, running or ended. */
-private data class Transfer(
-    val name: String,
-    val done: Long = 0,
-    val total: Long? = null,
-    val result: String? = null,
-)
+private data class Transfer(val name: String, val done: Long = 0, val total: Long? = null, val result: String? = null)
 
 /**
  * The whole app. [scanner] shows the camera and calls back with the first Knob code it reads;
@@ -74,21 +71,29 @@ private data class Transfer(
  * once [bluetoothAccess] has asked for Bluetooth. [picker] returns a function
  * that lets the user pick files to send; [back] takes the system's back gesture while enabled.
  * A [code] given skips the scan. [shared] holds files another app shared, offered for the folder
- * the user opens until sent or declined, which [onShared] reports. [onExit] closes the app from
+ * the user opens until sent or declined, which [onShareEnd] reports. [onExit] closes the app from
  * the menu; [libraries] reads the list of libraries it shows. [theme] sets the colours, [onTheme]
  * takes a new choice from the settings.
  */
+@Suppress(
+    // The root holds the navigation and the card's actions, and shows any failure of those to the user.
+    "CyclomaticComplexMethod",
+    "LongMethod",
+    "TooGenericExceptionCaught",
+    // [back] registers one handler per call.
+    "ContentSlotReused",
+)
 @Composable
 fun App(
     radio: Radio,
     downloads: Downloads,
     bluetooth: Bluetooth,
     bluetoothAccess: @Composable (content: @Composable () -> Unit) -> Unit,
-    code: JoinCode? = null,
-    picker: @Composable (onPicked: (List<Pick>) -> Unit) -> () -> Unit,
+    picker: @Composable (onPick: (List<Pick>) -> Unit) -> () -> Unit,
     back: @Composable (enabled: Boolean, onBack: () -> Unit) -> Unit,
+    code: JoinCode? = null,
     shared: Shared? = null,
-    onShared: () -> Unit = {},
+    onShareEnd: () -> Unit = {},
     onExit: () -> Unit = {},
     libraries: suspend () -> String = { "{}" },
     theme: Theme = Theme.System,
@@ -190,7 +195,7 @@ fun App(
             question = Question.Replace(picks, taken, fromShare)
             return
         }
-        if (fromShare) onShared()
+        if (fromShare) onShareEnd()
         upload(listing.path, picks)
     }
 
@@ -224,59 +229,87 @@ fun App(
         ) {
             Surface(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-                    TopBar(page.title, onMenu = { scope.launch { drawer.open() } }, onSettings = { page = Page.Settings })
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
-                        if (page == Page.Status) StatusPage(bluetooth, bluetoothAccess) else if (page != Page.Card) PageContent(page, libraries, theme, onTheme, onPage = { page = it }) else when (val current = stage) {
-                            is Stage.Scan -> ScanScreen(current.camera, shared, scanner) { stage = Stage.Joining(it) }
-                            is Stage.Joining -> {
-                                LaunchedEffect(current) {
-                                    try {
-                                        radio.join(current.code)
-                                        stage = Stage.Folder(client.list("/"))
-                                    } catch (e: Exception) {
-                                        fail(e)
-                                    }
+                    TopBar(
+                        page.title,
+                        onMenu = { scope.launch { drawer.open() } },
+                        onSettings = { page = Page.Settings },
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    ) {
+                        if (page == Page.Status) {
+                            StatusPage(bluetooth, bluetoothAccess)
+                        } else if (page != Page.Card) {
+                            PageContent(
+                                page,
+                                libraries,
+                                theme,
+                                onTheme,
+                                onPage = { page = it },
+                            )
+                        } else {
+                            when (val current = stage) {
+                                is Stage.Scan -> ScanScreen(current.camera, shared, scanner) {
+                                    stage = Stage.Joining(it)
                                 }
-                                Waiting("Joining ${current.code.ssid}")
-                            }
-                            is Stage.Folder -> {
-                                val here = current.listing.path
-                                FolderScreen(
-                                    listing = current.listing,
-                                    loading = loading,
-                                    busy = busy,
-                                    transfer = transfer,
-                                    shared = shared,
-                                    onSendShared = { shared?.let { send(it.picks, fromShare = true) } },
-                                    onDropShared = onShared,
-                                    onOpen = { entry ->
-                                        val path = here + entry.name
-                                        if (entry.directory) open("$path/") else download(path, entry.name)
-                                    },
-                                    onHold = { question = Question.Remove(it) },
-                                    onUp = { open(parentOf(here)) },
-                                    onNewFolder = { question = Question.NewFolder },
-                                    onUpload = pick,
-                                )
-                                question?.let { asked ->
-                                    Ask(asked, onDismiss = { question = null }) { name ->
-                                        question = null
-                                        when (asked) {
-                                            is Question.Remove -> change(here, asked.entry.name, "Deleted") {
-                                                client.delete(here + asked.entry.name)
-                                            }
-                                            is Question.Replace -> {
-                                                if (asked.shared) onShared()
-                                                upload(here, asked.picks)
-                                            }
-                                            Question.NewFolder -> change(here, name, "Made") {
-                                                client.makeFolder(here + name)
+
+                                is Stage.Joining -> {
+                                    LaunchedEffect(current) {
+                                        try {
+                                            radio.join(current.code)
+                                            stage = Stage.Folder(client.list("/"))
+                                        } catch (e: Exception) {
+                                            fail(e)
+                                        }
+                                    }
+                                    Waiting("Joining ${current.code.ssid}")
+                                }
+
+                                is Stage.Folder -> {
+                                    val here = current.listing.path
+                                    FolderScreen(
+                                        listing = current.listing,
+                                        loading = loading,
+                                        busy = busy,
+                                        transfer = transfer,
+                                        shared = shared,
+                                        onSendShare = { shared?.let { send(it.picks, fromShare = true) } },
+                                        onDropShare = onShareEnd,
+                                        onOpen = { entry ->
+                                            val path = here + entry.name
+                                            if (entry.directory) open("$path/") else download(path, entry.name)
+                                        },
+                                        onHold = { question = Question.Remove(it) },
+                                        onUp = { open(parentOf(here)) },
+                                        onNewFolder = { question = Question.NewFolder },
+                                        onUpload = pick,
+                                    )
+                                    question?.let { asked ->
+                                        Ask(asked, onDismiss = { question = null }) { name ->
+                                            question = null
+                                            when (asked) {
+                                                is Question.Remove -> change(here, asked.entry.name, "Deleted") {
+                                                    client.delete(here + asked.entry.name)
+                                                }
+
+                                                is Question.Replace -> {
+                                                    if (asked.shared) onShareEnd()
+                                                    upload(here, asked.picks)
+                                                }
+
+                                                Question.NewFolder -> change(here, name, "Made") {
+                                                    client.makeFolder(here + name)
+                                                }
                                             }
                                         }
                                     }
                                 }
+
+                                is Stage.Failed -> Failed(current.message) { stage = Stage.Scan(camera = true) }
                             }
-                            is Stage.Failed -> Failed(current.message) { stage = Stage.Scan(camera = true) }
                         }
                     }
                 }
@@ -315,12 +348,16 @@ private fun ScanScreen(
             if (open && wide) {
                 // Landscape: button beside the image, the square as tall as the remaining height.
                 Row(modifier = Modifier.weight(1f, fill = false), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Viewfinder(Modifier.aspectRatio(1f, matchHeightConstraintsFirst = true), scanner, onCode)
+                    Viewfinder(onCode, Modifier.aspectRatio(1f, matchHeightConstraintsFirst = true), scanner)
                     ActionButton("Close camera", onClick = { open = false }, filled = false)
                 }
             } else if (open) {
                 // Square on the shorter free side, so the button below always stays on screen.
-                Viewfinder(Modifier.weight(1f, fill = false).aspectRatio(1f, matchHeightConstraintsFirst = true), scanner, onCode)
+                Viewfinder(
+                    onCode,
+                    Modifier.weight(1f, fill = false).aspectRatio(1f, matchHeightConstraintsFirst = true),
+                    scanner,
+                )
                 ActionButton("Close camera", onClick = { open = false }, filled = false)
             } else {
                 ActionButton("Scan code", onClick = { open = true })
@@ -332,9 +369,9 @@ private fun ScanScreen(
 /** The camera with corner marks around its middle half, a hint at how large the code should appear. */
 @Composable
 private fun Viewfinder(
-    modifier: Modifier,
-    scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
     onCode: (JoinCode) -> Unit,
+    modifier: Modifier = Modifier,
+    scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
 ) {
     val accent = MaterialTheme.colorScheme.primary
     Box(modifier = modifier) {
@@ -387,8 +424,8 @@ private fun FolderScreen(
     busy: Boolean,
     transfer: Transfer?,
     shared: Shared?,
-    onSendShared: () -> Unit,
-    onDropShared: () -> Unit,
+    onSendShare: () -> Unit,
+    onDropShare: () -> Unit,
     onOpen: (Entry) -> Unit,
     onHold: (Entry) -> Unit,
     onUp: () -> Unit,
@@ -415,7 +452,7 @@ private fun FolderScreen(
             ActionButton("New folder", onClick = onNewFolder, enabled = !busy, filled = false)
             ActionButton("Upload files", onClick = onUpload, enabled = !busy)
         }
-        if (shared != null) SharedOffer(shared, busy, onSendShared, onDropShared)
+        if (shared != null) SharedOffer(shared, busy, onSendShare, onDropShare)
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(listing.entries, key = { it.name }) { entry ->
                 Row(
@@ -477,14 +514,20 @@ private fun Ask(question: Question, onDismiss: () -> Unit, onYes: (String) -> Un
     val (title, text, yes) = when (question) {
         is Question.Remove -> Triple(
             "Delete ${question.entry.name}?",
-            if (question.entry.directory) "Only an empty folder can be deleted." else "The file is removed from the card.",
+            if (question.entry.directory) {
+                "Only an empty folder can be deleted."
+            } else {
+                "The file is removed from the card."
+            },
             "Delete",
         )
+
         is Question.Replace -> Triple(
             "Replace ${filesText(question.taken.size)}?",
             question.taken.joinToString("\n"),
             "Replace",
         )
+
         Question.NewFolder -> Triple("New folder", null, "Make")
     }
     val ready = question != Question.NewFolder || name.isNotBlank()

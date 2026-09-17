@@ -44,6 +44,10 @@ android {
         }
     }
 
+    lint {
+        warningsAsErrors = true
+    }
+
     dependenciesInfo {
         // The signing block Google Play reads; F-Droid rejects APKs that carry it.
         includeInApk = false

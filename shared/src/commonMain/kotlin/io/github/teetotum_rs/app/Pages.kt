@@ -35,8 +35,8 @@ import com.mikepenz.aboutlibraries.entity.Library
 import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.m3.style.m3VariantTextStyles
-import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryActionKind
 import com.mikepenz.aboutlibraries.ui.compose.produceLibraries
+import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryActionKind
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
 
@@ -58,7 +58,7 @@ enum class Page(val title: String, val icon: ImageVector) {
 private val GROUPS: Map<Page, List<Pair<Page, String>>> = mapOf(
     Page.Home to listOf(
         Page.Card to "Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.",
-    Page.Status to "See over Bluetooth how long the Knob has run and how many Wi-Fi networks it sees.",
+        Page.Status to "See over Bluetooth how long the Knob has run and how many Wi-Fi networks it sees.",
     ),
     Page.About to listOf(
         Page.Help to "How to use the app, page by page.",
@@ -91,7 +91,9 @@ fun TopBar(title: String, onMenu: () -> Unit, onSettings: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onMenu) { AppIcon(MenuIcon, contentDescription = "Open menu", modifier = Modifier.size(BAR_ICON)) }
+        IconButton(onClick = onMenu) {
+            AppIcon(MenuIcon, contentDescription = "Open menu", modifier = Modifier.size(BAR_ICON))
+        }
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,
@@ -110,7 +112,9 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
     // Narrower than Material's 360 dp, so the page stays in sight on a phone of that width.
     ModalDrawerSheet(drawerState = drawer, modifier = Modifier.width(300.dp)) {
         Row(modifier = Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) { AppIcon(CloseIcon, contentDescription = "Close menu", modifier = Modifier.size(BAR_ICON)) }
+            IconButton(onClick = onClose) {
+                AppIcon(CloseIcon, contentDescription = "Close menu", modifier = Modifier.size(BAR_ICON))
+            }
             Text("TeeToTum", style = MaterialTheme.typography.titleLarge)
         }
         Column(modifier = Modifier.padding(12.dp)) {
@@ -135,7 +139,7 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
                             ) {
                                 AppIcon(
                                     if (open) CollapseIcon else ExpandIcon,
-                                    contentDescription = if (open) "Hide pages under ${entry.title}" else "Show pages under ${entry.title}",
+                                    contentDescription = "${if (open) "Hide" else "Show"} pages under ${entry.title}",
                                 )
                             }
                         }
@@ -243,7 +247,12 @@ internal fun CardColumn(content: @Composable () -> Unit) {
 
 /** A card with [icon] and [title] above its [content]; with [onClick], tapping the card calls it. */
 @Composable
-internal fun PageCard(icon: ImageVector, title: String, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+internal fun PageCard(
+    icon: ImageVector,
+    title: String,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
     val inner: @Composable () -> Unit = {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -313,9 +322,13 @@ private fun iconOf(page: Page, title: String): ImageVector =
 
 internal fun textOf(page: Page): String = when (page) {
     Page.Help -> HELP
+
     Page.Imprint -> IMPRINT
+
     Page.Privacy -> PRIVACY
+
     // The changelog's own title and preamble repeat what the page title says.
     Page.Changelog -> CHANGELOG.substring(CHANGELOG.indexOf("\n## ").coerceAtLeast(0))
+
     Page.Home, Page.Card, Page.Status, Page.About, Page.Settings, Page.Libraries -> ""
 }

@@ -11,8 +11,10 @@ fun sharedOf(context: Context, intent: Intent): Shared? {
     val uris = when (intent.action) {
         Intent.ACTION_SEND ->
             listOfNotNull(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java))
+
         Intent.ACTION_SEND_MULTIPLE ->
             IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
+
         else -> return null
     }
     val picks = uris.mapNotNull { uri ->

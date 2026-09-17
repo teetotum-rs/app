@@ -12,10 +12,10 @@ import java.io.IOException
 
 /** The system's document picker, for any number of files of any type. */
 @Composable
-fun rememberPicker(onPicked: (List<Pick>) -> Unit): () -> Unit {
+fun rememberPicker(onPick: (List<Pick>) -> Unit): () -> Unit {
     val context = LocalContext.current.applicationContext
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        onPicked(uris.mapNotNull { pickOf(context, it) })
+        onPick(uris.mapNotNull { pickOf(context, it) })
     }
     return { launcher.launch(arrayOf("*/*")) }
 }

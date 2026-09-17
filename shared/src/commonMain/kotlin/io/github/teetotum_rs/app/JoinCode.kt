@@ -27,9 +27,18 @@ data class JoinCode(val ssid: String, val password: String) {
             var escaped = false
             for (c in text) {
                 when {
-                    escaped -> { current.append('\\').append(c); escaped = false }
+                    escaped -> {
+                        current.append('\\').append(c)
+                        escaped = false
+                    }
+
                     c == '\\' -> escaped = true
-                    c == ';' -> { fields += current.toString(); current.clear() }
+
+                    c == ';' -> {
+                        fields += current.toString()
+                        current.clear()
+                    }
+
                     else -> current.append(c)
                 }
             }
@@ -41,7 +50,12 @@ data class JoinCode(val ssid: String, val password: String) {
             val out = StringBuilder()
             var escaped = false
             for (c in text) {
-                if (!escaped && c == '\\') escaped = true else { out.append(c); escaped = false }
+                if (!escaped && c == '\\') {
+                    escaped = true
+                } else {
+                    out.append(c)
+                    escaped = false
+                }
             }
             return out.toString()
         }

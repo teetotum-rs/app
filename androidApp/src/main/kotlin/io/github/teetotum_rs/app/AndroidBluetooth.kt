@@ -76,7 +76,9 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         val events = Channel<Event>(Channel.UNLIMITED)
         val callback = object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-                events.trySend(if (newState == BluetoothProfile.STATE_CONNECTED) Event.Connected else Event.Disconnected)
+                events.trySend(
+                    if (newState == BluetoothProfile.STATE_CONNECTED) Event.Connected else Event.Disconnected,
+                )
             }
 
             override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
@@ -135,12 +137,11 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
     }
 
     /** The next event, which has to be a [T]; a disconnect on the way ends the read. */
-    private suspend inline fun <reified T : Event> Channel<Event>.expect(): T =
-        when (val event = receive()) {
-            is T -> event
-            Event.Disconnected -> throw BluetoothFailed("The Knob ended the connection.")
-            else -> throw BluetoothFailed("The Knob answered out of turn.")
-        }
+    private suspend inline fun <reified T : Event> Channel<Event>.expect(): T = when (val event = receive()) {
+        is T -> event
+        Event.Disconnected -> throw BluetoothFailed("The Knob ended the connection.")
+        else -> throw BluetoothFailed("The Knob answered out of turn.")
+    }
 
     private sealed interface Event {
         data object Connected : Event

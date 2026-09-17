@@ -7,7 +7,9 @@ import kotlin.test.assertTrue
 class PagesTest {
     @Test
     fun splitsAtLevelTwoHeadings() {
-        val (intro, sections) = sectionsOf("Intro.\n\n## One\n\nFirst.\n\n### Sub\n\nStill first.\n\n## [0.2.0] - 2026-09-17\n\nSecond.\n")
+        val (intro, sections) = sectionsOf(
+            "Intro.\n\n## One\n\nFirst.\n\n### Sub\n\nStill first.\n\n## [0.2.0] - 2026-09-17\n\nSecond.\n",
+        )
         assertEquals("Intro.", intro)
         assertEquals(
             listOf("One" to "First.\n\n### Sub\n\nStill first.", "0.2.0 - 2026-09-17" to "Second."),

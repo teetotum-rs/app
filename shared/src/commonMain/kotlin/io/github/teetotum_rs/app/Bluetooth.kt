@@ -31,8 +31,7 @@ object KnobService {
 }
 
 /** An unsigned little-endian integer of up to eight bytes, the way the Knob sends numbers. */
-fun unsignedOf(bytes: ByteArray): Long =
-    bytes.foldRight(0L) { byte, value -> value shl 8 or (byte.toLong() and 0xff) }
+fun unsignedOf(bytes: ByteArray): Long = bytes.foldRight(0L) { byte, value -> value shl 8 or (byte.toLong() and 0xff) }
 
 /** The Knob's firmware as a line to show: its version, or what its silence means. */
 fun firmwareText(version: String?): String =
@@ -44,7 +43,9 @@ fun firmwareText(version: String?): String =
  */
 fun cardText(bytes: Long?): String = when (bytes) {
     null -> "Needs firmware 0.3.4 or later."
+
     0L -> "No card in the Knob."
+
     else -> (bytes / 1_000_000).let { mb ->
         when {
             mb < 1_000 -> "0.${mb.toString().padStart(3, '0')} GB"
