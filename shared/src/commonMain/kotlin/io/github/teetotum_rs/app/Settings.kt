@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
@@ -179,9 +180,16 @@ fun SettingsPage(theme: Theme, onTheme: (Theme) -> Unit) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        SettingsCard("Appearance") {
-            Text("Theme", style = MaterialTheme.typography.titleSmall)
-            Column(Modifier.selectableGroup()) {
+        SettingsCard("Appearance", AppearanceIcon) {
+            Row(
+                modifier = Modifier.padding(start = SETTING_INDENT),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppIcon(ThemeIcon, contentDescription = null)
+                Text("Theme", style = MaterialTheme.typography.titleSmall)
+            }
+            Column(Modifier.padding(start = SETTING_INDENT * 2).selectableGroup()) {
                 for (option in Theme.entries) {
                     Row(
                         modifier = Modifier
@@ -206,11 +214,17 @@ fun SettingsPage(theme: Theme, onTheme: (Theme) -> Unit) {
     }
 }
 
+/** How far a setting sits in from its card's title. */
+private val SETTING_INDENT = 16.dp
+
 @Composable
-private fun SettingsCard(title: String, content: @Composable () -> Unit) {
+private fun SettingsCard(title: String, icon: ImageVector, content: @Composable () -> Unit) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                AppIcon(icon, contentDescription = null)
+                Text(title, style = MaterialTheme.typography.titleMedium)
+            }
             content()
         }
     }

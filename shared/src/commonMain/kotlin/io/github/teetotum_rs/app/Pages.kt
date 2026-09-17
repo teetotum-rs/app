@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,13 +44,37 @@ import com.mikepenz.markdown.m3.markdownTypography
 enum class Page(val title: String, val icon: ImageVector) {
     Home("Home", HomeIcon),
     Card("Card over Wi-Fi", WifiIcon),
-    Settings("Settings", SettingsIcon),
+    About("About", AboutIcon),
     Help("Help", HelpIcon),
     Imprint("Imprint", ImprintIcon),
     Privacy("Privacy", PrivacyIcon),
     Changelog("Changelog", ChangelogIcon),
     Libraries("Libraries", LibrariesIcon),
+    Settings("Settings", SettingsIcon),
 }
+
+/** The pages that sit under another in the menu, each with the line on its card there. */
+private val GROUPS: Map<Page, List<Pair<Page, String>>> = mapOf(
+    Page.Home to listOf(
+        Page.Card to "Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.",
+    ),
+    Page.About to listOf(
+        Page.Help to "How to use the app, page by page.",
+        Page.Imprint to "Who makes the app, and where its code and the Knob's live.",
+        Page.Privacy to "What the app does with your data.",
+        Page.Changelog to "What changed in each version.",
+        Page.Libraries to "The open-source libraries the app is built on, with their licences.",
+    ),
+)
+
+private val GROUPED = GROUPS.values.flatten().map { it.first }
+
+/** The page [this] sits under: its group, or home for a page in none. */
+val Page.parent: Page
+    get() = GROUPS.entries.firstOrNull { (_, pages) -> pages.any { it.first == this } }?.key ?: Page.Home
+
+/** How far the pages under a group are indented in the menu. */
+private val GROUP_INDENT = 24.dp
 
 /** Menu and close are thin glyphs; at this size they weigh as much as the 24 dp settings gear. */
 private val BAR_ICON = 28.dp
@@ -78,6 +104,7 @@ fun TopBar(title: String, onMenu: () -> Unit, onSettings: () -> Unit) {
 /** The menu that slides in from the left. */
 @Composable
 fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) -> Unit, onExit: () -> Unit) {
+    var folded by rememberSaveable { mutableStateOf(emptyList<Page>()) }
     // Narrower than Material's 360 dp, so the page stays in sight on a phone of that width.
     ModalDrawerSheet(drawerState = drawer, modifier = Modifier.width(300.dp)) {
         Row(modifier = Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -86,12 +113,33 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
         }
         Column(modifier = Modifier.padding(12.dp)) {
             for (entry in Page.entries) {
+                val grouped = entry in GROUPED
+                if (grouped && entry.parent in folded) continue
                 NavigationDrawerItem(
                     label = { Text(entry.title) },
                     icon = { AppIcon(entry.icon, contentDescription = null) },
                     selected = entry == page,
                     shape = ButtonShape,
                     onClick = { onPage(entry) },
+                    // Grouped pages sit indented under their group, which folds them away with its trailing button.
+                    modifier = if (grouped) Modifier.padding(start = GROUP_INDENT) else Modifier,
+                    badge = if (entry in GROUPS) {
+                        {
+                            val open = entry !in folded
+                            // Pulled into the item's end padding, so the arrow sits at the end of the entry.
+                            IconButton(
+                                onClick = { folded = if (open) folded + entry else folded - entry },
+                                modifier = Modifier.offset(x = 20.dp),
+                            ) {
+                                AppIcon(
+                                    if (open) CollapseIcon else ExpandIcon,
+                                    contentDescription = if (open) "Hide pages under ${entry.title}" else "Show pages under ${entry.title}",
+                                )
+                            }
+                        }
+                    } else {
+                        null
+                    },
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -108,7 +156,7 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
 
 /**
  * A page from the menu other than [Page.Card]; [libraries] reads the list for [Page.Libraries],
- * [theme] and [onTheme] are the setting shown on [Page.Settings], [onPage] opens a feature from [Page.Home].
+ * [theme] and [onTheme] are the setting shown on [Page.Settings], [onPage] opens a page from a group's cards.
  */
 @OptIn(ExperimentalMaterial3Api::class) // LibrariesContainer's overload with its own dialog state
 @Composable
@@ -119,8 +167,9 @@ fun PageContent(
     onTheme: (Theme) -> Unit,
     onPage: (Page) -> Unit,
 ) {
-    if (page == Page.Home) {
-        HomePage(onPage)
+    val cards = GROUPS[page]
+    if (cards != null) {
+        CardsPage(cards, onPage)
     } else if (page == Page.Settings) {
         SettingsPage(theme, onTheme)
     } else if (page == Page.Libraries) {
@@ -166,24 +215,19 @@ fun PageContent(
     }
 }
 
-/** The features of the app, one card each. */
-private val FEATURES = listOf(
-    Page.Card to "Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.",
-)
-
-/** The start page: a card for every feature, which [onPage] opens. */
+/** A group's page: a card for each page under it, which [onPage] opens. */
 @Composable
-private fun HomePage(onPage: (Page) -> Unit) {
+private fun CardsPage(cards: List<Pair<Page, String>>, onPage: (Page) -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        for ((feature, detail) in FEATURES) {
-            OutlinedCard(onClick = { onPage(feature) }, modifier = Modifier.fillMaxWidth()) {
+        for ((card, detail) in cards) {
+            OutlinedCard(onClick = { onPage(card) }, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        AppIcon(feature.icon, contentDescription = null)
-                        Text(feature.title, style = MaterialTheme.typography.titleMedium)
+                        AppIcon(card.icon, contentDescription = null)
+                        Text(card.title, style = MaterialTheme.typography.titleMedium)
                     }
                     Text(
                         detail,
@@ -202,7 +246,7 @@ private fun textOf(page: Page): String = when (page) {
     Page.Privacy -> PRIVACY
     // The changelog's own title and preamble repeat what the page title says.
     Page.Changelog -> CHANGELOG.substring(CHANGELOG.indexOf("\n## ").coerceAtLeast(0))
-    Page.Home, Page.Card, Page.Settings, Page.Libraries -> ""
+    Page.Home, Page.Card, Page.About, Page.Settings, Page.Libraries -> ""
 }
 
 private const val HELP = """
@@ -212,9 +256,10 @@ its folders, download and upload files, make folders and delete.
 ## Getting around
 
 - The button at the top left opens the menu with every page of the app.
-- The gear at the top right opens the settings.
-- **Home** shows a card for each feature; tap one to open it.
-- The back gesture leads from any other page back to **Home**.
+- **Home** shows a card for each feature, **About** one for each page about the app; tap a card to open it.
+  In the menu their pages sit under them, and the arrow beside each folds them away.
+- The gear at the top right, or **Settings** at the end of the menu, opens the settings.
+- The back gesture leads to the page above: from a page under **About** to **About**, from any other to **Home**.
 
 ## Connect
 
@@ -242,13 +287,14 @@ open: **Send here** uploads them into it, **Cancel** drops them.
 **Theme** sets the app's colours: the phone's own, GitHub's, or the Knob's red. Each follows the
 phone's light or dark mode.
 
-## The menu
+## About
 
 - **Help** is this page.
 - **Imprint** and **Privacy** say who makes the app and what it does with your data.
 - **Changelog** lists what changed in each version.
 - **Libraries** names the open-source libraries the app is built on, with their licences.
-- **Exit** closes the app.
+
+**Exit** at the end of the menu closes the app.
 """
 
 private const val IMPRINT = """

@@ -194,7 +194,7 @@ fun App(
     val folder = stage as? Stage.Folder
     val pick = picker { picks -> send(picks, fromShare = false) }
     // The handler registered last wins: going up a folder comes before going home.
-    back(page != Page.Home) { page = Page.Home }
+    back(page != Page.Home) { page = page.parent }
     back(page == Page.Card && folder != null && folder.listing.path != "/" && !busy) {
         folder?.let { open(parentOf(it.listing.path)) }
     }
