@@ -6,6 +6,8 @@ All notable changes to the app are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-17
+
 ### Added
 
 - An app icon in the look of the knob's favicon.
