@@ -56,6 +56,14 @@ reads them anew. A plugin you sent has a **Delete** button, a built-in one has n
 **Settings > Receive** on the Knob first, then tap **Delete** and confirm; the Knob deletes the plugin
 and restarts.
 
+## Knob settings over Bluetooth
+
+Choose **Knob settings over Bluetooth** on **Home** or in the menu. The page reads the Knob's
+**Theme**, **Brightness**, **Clicks** and **Orientation** when it opens. A change goes to the Knob at
+once: it shows there and stays after a restart, as if you had set it with **OK** in the Knob's
+**Settings**. The first change asks to pair the phone with the Knob; accept it. **Read again** reads
+the settings anew, for instance after you changed them on the Knob.
+
 ## About
 
 - **Help** is this page.

@@ -267,6 +267,8 @@ fun App(
                     ) {
                         if (page == Page.Status) {
                             StatusPage(bluetooth, bluetoothAccess)
+                        } else if (page == Page.KnobSettings) {
+                            KnobSettingsPage(bluetooth, bluetoothAccess)
                         } else if (page == Page.Plugins) {
                             PluginsPage(bluetooth, bluetoothAccess, picker, preferences.catalogue)
                         } else if (page != Page.Card) {

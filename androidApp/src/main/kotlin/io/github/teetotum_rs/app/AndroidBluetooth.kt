@@ -132,7 +132,29 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
     }
 
     /** Finds the Knob, connects, runs [block] and disconnects. */
-    private suspend fun <T> session(block: suspend Session.() -> T): T {
+    override suspend fun knobSettings(): KnobSettings = session(SETTINGS) {
+        val characteristic = service(KnobService.SERVICE)?.characteristic(KnobService.SETTINGS)
+            ?: throw BluetoothFailed(Res.string.bluetooth_error_no_settings)
+        KnobSettings.decode(read(characteristic))
+            ?: throw BluetoothFailed(Res.string.bluetooth_error_settings_format)
+    }
+
+    override suspend fun writeKnobSettings(settings: KnobSettings) = session(SETTINGS) {
+        val characteristic = service(KnobService.SERVICE)?.characteristic(KnobService.SETTINGS)
+            ?: throw BluetoothFailed(Res.string.bluetooth_error_no_settings)
+        // Only a paired phone may change them.
+        bond()
+        if (!write(characteristic, settings.encode())) {
+            throw BluetoothFailed(Res.string.bluetooth_error_refused_settings)
+        }
+    }
+
+    /**
+     * Connects, runs [block] and disconnects. With [needs], a service and characteristic UUID, the services are
+     * discovered a second time when the first lacks it: for a paired Knob, Android keeps the services from an
+     * earlier connection, which miss what a newer firmware added.
+     */
+    private suspend fun <T> session(needs: Pair<String, String>? = null, block: suspend Session.() -> T): T {
         val adapter = adapter ?: throw BluetoothFailed(Res.string.bluetooth_error_no_adapter)
         if (!adapter.isEnabled) throw BluetoothFailed(Res.string.bluetooth_error_off)
         val device = try {
@@ -145,6 +167,9 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         return try {
             gatt.discoverServices()
             if (!session.expect<Event.Discovered>().ok) throw BluetoothFailed(Res.string.bluetooth_error_services)
+            if (needs != null && !gatt.has(needs) && gatt.rediscover()) {
+                session.expect<Event.Discovered>()
+            }
             session.block()
         } finally {
             gatt.disconnect()
@@ -418,6 +443,8 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
     }
 
     private companion object {
+        /** The Knob's settings characteristic, as its service and its own UUID. */
+        val SETTINGS = KnobService.SERVICE to KnobService.SETTINGS
         const val SCAN_TIMEOUT_MS = 10_000L
         const val STEP_TIMEOUT_MS = 15_000L
         const val CONNECT_ATTEMPTS = 3
@@ -436,3 +463,12 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         const val NOTIFICATIONS = "00002902-0000-1000-8000-00805f9b34fb"
     }
 }
+
+private fun BluetoothGatt.has(needs: Pair<String, String>): Boolean =
+    getService(UUID.fromString(needs.first))?.getCharacteristic(UUID.fromString(needs.second)) != null
+
+/** Drops Android's cached services of this device and starts discovering them; false when that cannot be done. */
+// No public API clears the cache; BLE libraries call it the same way. Permissions as for the class.
+@SuppressLint("DiscouragedPrivateApi", "MissingPermission")
+private fun BluetoothGatt.rediscover(): Boolean =
+    runCatching { javaClass.getMethod("refresh").invoke(this) as Boolean }.getOrDefault(false) && discoverServices()

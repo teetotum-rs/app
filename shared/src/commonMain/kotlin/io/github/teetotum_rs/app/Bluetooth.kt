@@ -21,6 +21,15 @@ interface Bluetooth {
      * restarts. Throws [BluetoothFailed] when it cannot.
      */
     suspend fun deletePlugin(slot: Int)
+
+    /** The Knob's theme, brightness, clicks and orientation; throws [BluetoothFailed] when it cannot. */
+    suspend fun knobSettings(): KnobSettings
+
+    /**
+     * Writes [settings] to the Knob, which shows and keeps them, pairing first if need be. Throws
+     * [BluetoothFailed] when it cannot.
+     */
+    suspend fun writeKnobSettings(settings: KnobSettings)
 }
 
 class BluetoothFailed(override val shown: Message) :
@@ -49,6 +58,7 @@ object KnobService {
     const val NETWORKS = "4ea309d6-ee6a-4be8-b753-1925723a2e15"
     const val VERSION = "3a298945-67fa-444e-9739-e0698bc95ca9"
     const val CARD_BYTES = "5bd092f3-61c8-4fc5-b755-f19328dd0172"
+    const val SETTINGS = "dcec6510-5a6a-41c3-b83f-a638357034ff"
 }
 
 /** An unsigned little-endian integer of up to eight bytes, the way the Knob sends numbers. */

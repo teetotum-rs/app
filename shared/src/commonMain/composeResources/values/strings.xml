@@ -20,6 +20,7 @@
     <string name="page_card">Card over Wi-Fi</string>
     <string name="page_status">Status over Bluetooth</string>
     <string name="page_plugins">Plugins over Bluetooth</string>
+    <string name="page_knob_settings">Knob settings over Bluetooth</string>
     <string name="page_about">About</string>
     <string name="page_help">Help</string>
     <string name="page_imprint">Imprint</string>
@@ -31,6 +32,7 @@
     <!-- The line on each page's card on Home and About -->
     <string name="page_card_detail">Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.</string>
     <string name="page_status_detail">See over Bluetooth the Knob's firmware, card, how long it has run and how many Wi-Fi networks it sees.</string>
+    <string name="page_knob_settings_detail">Change the Knob's theme, brightness, clicks and orientation over Bluetooth.</string>
     <string name="page_plugins_detail">Send plugins to the Knob over Bluetooth, from the catalogue or your own.</string>
     <string name="page_help_detail">How to use the app, page by page.</string>
     <string name="page_imprint_detail">Who makes the app, and where its code and the Knob's live.</string>
@@ -130,6 +132,23 @@
     <string name="settings_theme_red_detail">The knob's red theme, light or dark as the phone is set</string>
 
     <!-- Status over Bluetooth -->
+    <string name="knob_settings_hint">A change shows on the Knob at once and stays after a restart. The first one asks to pair the phone.</string>
+    <string name="knob_settings_theme">Theme</string>
+    <string name="knob_settings_brightness">Brightness</string>
+    <string name="knob_settings_clicks">Clicks</string>
+    <string name="knob_settings_clicks_off">Off</string>
+    <string name="knob_settings_orientation">Orientation</string>
+    <string name="knob_theme_teal">Teal</string>
+    <string name="knob_theme_orange">Orange</string>
+    <string name="knob_theme_magenta">Magenta</string>
+    <string name="knob_theme_violet">Violet</string>
+    <string name="knob_theme_blue">Blue</string>
+    <string name="knob_theme_pink">Pink</string>
+    <string name="knob_theme_red">Red</string>
+    <string name="knob_theme_green">Green</string>
+    <string name="knob_theme_cyan">Cyan</string>
+    <string name="knob_theme_indigo">Indigo</string>
+    <string name="knob_theme_grey">Grey</string>
     <string name="status_looking">Looking for the Knob</string>
     <string name="status_firmware">Firmware</string>
     <string name="status_card">Card</string>
@@ -162,6 +181,9 @@
     <string name="bluetooth_error_refused_plugin">The Knob refused the plugin.</string>
     <string name="bluetooth_error_no_plugin_list">This Knob does not list its plugins over Bluetooth. Update its firmware.</string>
     <string name="bluetooth_error_refused_delete">The Knob refused to delete the plugin.</string>
+    <string name="bluetooth_error_no_settings">This Knob does not share its settings over Bluetooth. Update its firmware.</string>
+    <string name="bluetooth_error_settings_format">The Knob sent settings this app does not know. Update the app.</string>
+    <string name="bluetooth_error_refused_settings">The Knob refused the settings.</string>
     <string name="bluetooth_error_not_paired">The Knob was not paired. Accept the phone's pairing request, then try again.</string>
     <string name="bluetooth_error_bond_lost">The Knob no longer knows this phone. Remove the Knob in the phone's Bluetooth settings, then try again.</string>
     <string name="bluetooth_error_plugin_entry">The Knob sent a plugin entry this app cannot read.</string>

@@ -11,7 +11,8 @@ The app joins the network the Knob offers and talks only to the Knob.
 
 ## Bluetooth
 
-The app searches for the Knob, reads its status or sends it the plugin you chose, and disconnects.
+The app searches for the Knob, reads its status and settings or sends it the plugin or setting you chose, and
+disconnects.
 It does not use Bluetooth to find out where you are. On Android 10 and 11 the system still calls this the location permission,
 because a Bluetooth search could reveal a location.
 

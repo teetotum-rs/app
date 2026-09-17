@@ -3,6 +3,8 @@ package io.github.teetotum_rs.app
 /** A Knob in memory: [plugins] as it lists them, [receiving] as if its Settings > Receive were open. */
 class FakeBluetooth(var plugins: List<KnobPlugin> = emptyList(), var receiving: Boolean = true) : Bluetooth {
     val deleted = mutableListOf<Int>()
+    var settings = KnobSettings(theme = 6, brightness = 4, haptics = 4, orientation = 0)
+    val written = mutableListOf<KnobSettings>()
 
     override suspend fun status() = KnobStatus(uptimeSeconds = 42, networks = 3, version = "v0.4.0", cardBytes = 0)
 
@@ -20,5 +22,12 @@ class FakeBluetooth(var plugins: List<KnobPlugin> = emptyList(), var receiving: 
         }
         deleted += slot
         plugins = plugins.filter { it.slot != slot }
+    }
+
+    override suspend fun knobSettings() = settings
+
+    override suspend fun writeKnobSettings(settings: KnobSettings) {
+        written += settings
+        this.settings = settings
     }
 }

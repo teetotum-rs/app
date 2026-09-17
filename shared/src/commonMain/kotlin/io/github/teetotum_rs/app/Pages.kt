@@ -48,6 +48,7 @@ enum class Page(val title: StringResource, val icon: DrawableResource) {
     Card(Res.string.page_card, Res.drawable.wifi),
     Status(Res.string.page_status, Res.drawable.bluetooth),
     Plugins(Res.string.page_plugins, Res.drawable.extension),
+    KnobSettings(Res.string.page_knob_settings, Res.drawable.tune),
     About(Res.string.page_about, Res.drawable.info),
     Help(Res.string.page_help, Res.drawable.help),
     Imprint(Res.string.page_imprint, Res.drawable.article),
@@ -63,6 +64,7 @@ private val GROUPS: Map<Page, List<Pair<Page, StringResource>>> = mapOf(
         Page.Card to Res.string.page_card_detail,
         Page.Status to Res.string.page_status_detail,
         Page.Plugins to Res.string.page_plugins_detail,
+        Page.KnobSettings to Res.string.page_knob_settings_detail,
     ),
     Page.About to listOf(
         Page.Help to Res.string.page_help_detail,
@@ -334,6 +336,7 @@ internal val SECTION_ICONS: Map<String, DrawableResource> = mapOf(
     "Bluetooth" to Res.drawable.bluetooth,
     "Status over Bluetooth" to Res.drawable.bluetooth,
     "Plugins over Bluetooth" to Res.drawable.extension,
+    "Knob settings over Bluetooth" to Res.drawable.tune,
     "Plugins" to Res.drawable.extension,
     "Files" to Res.drawable.folder,
 )
@@ -351,5 +354,6 @@ internal fun textOf(page: Page): String = when (page) {
     // The changelog's own title and preamble repeat what the page title says.
     Page.Changelog -> CHANGELOG.substring(CHANGELOG.indexOf("\n## ").coerceAtLeast(0))
 
-    Page.Home, Page.Card, Page.Status, Page.Plugins, Page.About, Page.Settings, Page.Libraries -> ""
+    Page.Home, Page.Card, Page.Status, Page.Plugins, Page.KnobSettings, Page.About, Page.Settings, Page.Libraries,
+    -> ""
 }
