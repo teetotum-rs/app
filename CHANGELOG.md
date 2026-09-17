@@ -33,13 +33,10 @@ All notable changes to the app are listed here. The format follows
 ### Added
 
 - An app icon in the look of the knob's favicon.
-- Help describes the whole app; the imprint names the author and links the app's and the Knob's
-  repositories.
+- Help describes the whole app; the imprint names the author and links the app's and the Knob's repositories.
 - A menu, opened from the top left: Card over Wi-Fi, help, imprint, privacy, changelog, the libraries the app uses and exit.
-- Settings, also opened from the top right, with a theme in the system's or GitHub's colours or in
-  the knob's red, light or dark as the phone is set.
-- Share files from any app to TeeToTum: they are offered for the folder you open, with the same
-  question before replacing.
+- Settings, also opened from the top right, with a theme in the system's or GitHub's colours or in the knob's red, light or dark as the phone is set.
+- Share files from any app to TeeToTum: they are offered for the folder you open, with the same question before replacing.
 
 ### Changed
 

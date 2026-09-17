@@ -1,17 +1,15 @@
-TeeToTum is the phone app for the TeeToTum Knob. It reads the card in the Knob over Wi-Fi: browse
-its folders, download and upload files, make folders and delete.
+TeeToTum is the phone app for the TeeToTum Knob. **Home** shows what it can do; each feature has its
+section below.
 
 ## Menu
 
 The button at the top left opens the menu with every page of the app.
 
 - Tap a page to open it. The menu closes, and next time it marks the page you are on.
-- **Home** and **About** have their pages indented under them. The arrow at the end of each folds those
-  pages away or shows them again; the menu keeps that while the app is open.
+- **Home** and **About** have their pages indented under them. The arrow at the end of each folds those pages away or shows them again; the menu keeps that while the app is open.
 - **Settings** opens the settings, as the gear at the top right does.
 - **Exit**, below the line, closes the app.
-- The cross at the top, a tap beside the menu, a swipe to the left or the back gesture close it and leave
-  the page as it was.
+- The cross at the top, a tap beside the menu, a swipe to the left or the back gesture close it and leave the page as it was.
 
 ## Getting around
 

@@ -58,7 +58,8 @@ enum class Page(val title: String, val icon: ImageVector) {
 private val GROUPS: Map<Page, List<Pair<Page, String>>> = mapOf(
     Page.Home to listOf(
         Page.Card to "Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.",
-        Page.Status to "See over Bluetooth how long the Knob has run and how many Wi-Fi networks it sees.",
+        Page.Status to
+            "See over Bluetooth the Knob's firmware, card, how long it has run and how many Wi-Fi networks it sees.",
     ),
     Page.About to listOf(
         Page.Help to "How to use the app, page by page.",
