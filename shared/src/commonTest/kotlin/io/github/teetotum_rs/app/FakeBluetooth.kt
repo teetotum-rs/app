@@ -13,6 +13,11 @@ class FakeBluetooth(var plugins: List<KnobPlugin> = emptyList(), var receiving: 
         progress(module.size)
     }
 
+    override suspend fun sendFirmware(image: ByteArray, signature: ByteArray, progress: (sent: Int) -> Unit) {
+        if (!receiving) throw BluetoothFailed(Res.string.bluetooth_error_refused_begin)
+        progress(image.size)
+    }
+
     override suspend fun plugins(): List<KnobPlugin> = plugins
 
     override suspend fun deletePlugin(slot: Int) {

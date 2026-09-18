@@ -16,10 +16,11 @@ All notable changes to the app are listed here. The format follows
 - Settings show an icon before each card and setting title.
 - Corner marks on the camera frame show how large the code should appear.
 - A monochrome launcher icon, for phones set to themed icons.
-- Plugins over Bluetooth sends a plugin from the catalogue, or a signed `.wasm` file of your own, to the Knob.
+- Plugins over Bluetooth sends a plugin from the catalogue, or a signed `.wasm` file of your own, to the Knob, and shows the percent sent as the Knob does.
 - Plugins over Bluetooth lists the plugins on the Knob and deletes one you sent, after asking, while Receive is open on the Knob.
 - Sending or deleting a plugin pairs the phone with the Knob first; the phone asks once.
 - A Bluetooth connection that does not come about is tried up to three times before the app says so.
+- Firmware over Bluetooth sends a signed `.tfw` firmware file to the Knob, which checks it, switches to it and restarts; the page shows the firmware's version before sending, and the percent sent, the rate and the time still to go while it sends.
 - Settings choose the start page, Home or the page last open, and whether the plugin catalogue is read from GitHub only on tap, as by default, or as soon as the page opens.
 
 ### Changed

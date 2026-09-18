@@ -64,6 +64,15 @@ once: it shows there and stays after a restart, as if you had set it with **OK**
 **Settings**. The first change asks to pair the phone with the Knob; accept it. **Read again** reads
 the settings anew, for instance after you changed them on the Knob.
 
+## Firmware over Bluetooth
+
+Choose **Firmware over Bluetooth** on **Home** or in the menu, then **Choose file** and pick a signed
+firmware file, `.tfw`. The app shows the firmware's name, version and size. On the Knob, open
+**Settings > Receive**, then tap **Send to Knob**. Sending takes a few minutes; the screen stays
+on meanwhile, and the page shows how much is sent and how long it will still take. The Knob writes the
+firmware beside the one it runs, checks the signature, switches and restarts. A transfer that breaks
+off, or a file not signed with the project's key, changes nothing.
+
 ## About
 
 - **Help** is this page.

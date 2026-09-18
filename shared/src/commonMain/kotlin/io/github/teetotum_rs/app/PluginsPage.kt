@@ -28,7 +28,7 @@ import kotlinx.io.IOException
 import org.jetbrains.compose.resources.stringResource
 
 /** Where a send stands: bytes sent of all, or how it ended. */
-private class Sending(val sent: Int, val total: Int, val result: Message? = null)
+internal class Sending(val sent: Int, val total: Int, val result: Message? = null)
 
 /** Your own plugin, picked from the phone: what it says about itself, or why it is none. */
 private class OwnPlugin(val name: String, val wasm: ByteArray?, val about: PluginAbout?, val problem: Message?)
@@ -207,7 +207,7 @@ private fun OwnPluginCard(
 }
 
 /** All bytes of [pick]; throws [IOException] if it ends before its size. */
-private fun readAll(pick: Pick): ByteArray = pick.open().use { source ->
+internal fun readAll(pick: Pick): ByteArray = pick.open().use { source ->
     val bytes = ByteArray(pick.size.toInt())
     val buffer = ByteArray(READ_BUFFER)
     var at = 0
@@ -236,8 +236,9 @@ internal fun PluginLine(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
+/** How a send stands; [progress] replaces the line of bytes sent while it runs. */
 @Composable
-private fun SendLine(sending: Sending?) {
+internal fun SendLine(sending: Sending?, progress: String? = null) {
     if (sending == null) return
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (sending.result != null) {
@@ -246,9 +247,9 @@ private fun SendLine(sending: Sending?) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         } else {
             Text(
-                stringResource(
+                progress ?: stringResource(
                     Res.string.plugins_progress,
-                    sizeText(sending.sent.toLong()),
+                    percentOf(sending.sent, sending.total),
                     sizeText(sending.total.toLong()),
                 ),
                 style = MaterialTheme.typography.bodyMedium,

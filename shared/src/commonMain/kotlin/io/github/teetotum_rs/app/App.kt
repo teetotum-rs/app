@@ -271,6 +271,8 @@ fun App(
                             KnobSettingsPage(bluetooth, bluetoothAccess)
                         } else if (page == Page.Plugins) {
                             PluginsPage(bluetooth, bluetoothAccess, picker, preferences.catalogue)
+                        } else if (page == Page.Firmware) {
+                            FirmwarePage(bluetooth, bluetoothAccess, picker)
                         } else if (page != Page.Card) {
                             PageContent(
                                 page,

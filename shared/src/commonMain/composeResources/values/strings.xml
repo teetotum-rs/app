@@ -21,6 +21,7 @@
     <string name="page_status">Status over Bluetooth</string>
     <string name="page_plugins">Plugins over Bluetooth</string>
     <string name="page_knob_settings">Knob settings over Bluetooth</string>
+    <string name="page_firmware">Firmware over Bluetooth</string>
     <string name="page_about">About</string>
     <string name="page_help">Help</string>
     <string name="page_imprint">Imprint</string>
@@ -33,6 +34,7 @@
     <string name="page_card_detail">Browse the card in the Knob over its Wi-Fi: download, upload, make folders and delete.</string>
     <string name="page_status_detail">See over Bluetooth the Knob's firmware, card, how long it has run and how many Wi-Fi networks it sees.</string>
     <string name="page_knob_settings_detail">Change the Knob's theme, brightness, clicks and orientation over Bluetooth.</string>
+    <string name="page_firmware_detail">Update the Knob's firmware over Bluetooth from a signed file.</string>
     <string name="page_plugins_detail">Send plugins to the Knob over Bluetooth, from the catalogue or your own.</string>
     <string name="page_help_detail">How to use the app, page by page.</string>
     <string name="page_imprint_detail">Who makes the app, and where its code and the Knob's live.</string>
@@ -186,6 +188,9 @@
     <string name="bluetooth_error_refused_settings">The Knob refused the settings.</string>
     <string name="bluetooth_error_not_paired">The Knob was not paired. Accept the phone's pairing request, then try again.</string>
     <string name="bluetooth_error_bond_lost">The Knob no longer knows this phone. Remove the Knob in the phone's Bluetooth settings, then try again.</string>
+    <string name="bluetooth_error_no_firmware">This Knob's firmware cannot update itself over Bluetooth. Update it once over USB with the web installer.</string>
+    <string name="bluetooth_error_refused_firmware_piece">The Knob refused a piece of the firmware.</string>
+    <string name="bluetooth_error_refused_firmware">The Knob refused the firmware.</string>
     <string name="bluetooth_error_plugin_entry">The Knob sent a plugin entry this app cannot read.</string>
 
     <!-- Plugins over Bluetooth -->
@@ -197,7 +202,7 @@
     <string name="plugins_catalogue">Catalogue</string>
     <string name="plugins_catalogue_hint">The plugins published for the Knob, read from GitHub.</string>
     <string name="plugins_catalogue_load">Load catalogue</string>
-    <string name="plugins_progress">%1$s of %2$s</string>
+    <string name="plugins_progress">%1$d % of %2$s</string>
     <string name="plugins_sent">Sent. The Knob restarts and asks you to install it.</string>
     <string name="plugins_facts">Version %1$s · %2$s · uses %3$s</string>
     <string name="plugins_uses_nothing">nothing</string>
@@ -242,4 +247,18 @@
     <string name="plugins_knob_piece_missing">A piece went missing on the way.</string>
     <string name="plugins_knob_other_than_announced">The plugin arrived other than announced.</string>
     <string name="plugins_knob_flash_failed">The Knob's flash failed.</string>
+
+    <!-- Firmware over Bluetooth -->
+    <string name="firmware_intro">Open Settings &gt; Receive on the Knob, then send a signed firmware file. Sending takes a few minutes; keep the phone near the Knob and this page open. The Knob checks the signature, switches to the new firmware and restarts. Until then it keeps the firmware it runs, so a broken transfer changes nothing.</string>
+    <string name="firmware_file">Firmware file</string>
+    <string name="firmware_file_hint">A firmware image signed with the project's key, as a .tfw file.</string>
+    <string name="firmware_facts">%1$s %2$s · %3$s</string>
+    <string name="firmware_progress">%1$d % of %2$s · %3$s/s · %4$s left</string>
+    <string name="firmware_sent">Sent. The Knob switches to the new firmware and restarts; Status over Bluetooth shows its version.</string>
+    <string name="firmware_error_too_long">Longer than %1$d bytes.</string>
+    <string name="firmware_error_not_firmware">Not a firmware image for the Knob.</string>
+
+    <!-- Firmware over Bluetooth: why the Knob refused, by its status code -->
+    <string name="firmware_knob_no_update">The Knob took it for no update.</string>
+    <string name="firmware_knob_mismatch">The Knob refused the firmware: it is not signed with the project's key, or arrived other than announced.</string>
 </resources>

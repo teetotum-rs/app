@@ -27,6 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import org.jetbrains.compose.resources.StringResource
 import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -58,40 +59,97 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
 
     override suspend fun sendPlugin(module: ByteArray, header: ByteArray, progress: (sent: Int) -> Unit) = session {
         val mtu = requestMtu(MTU)
-        val service = service(PluginService.SERVICE)
-            ?: throw BluetoothFailed(Res.string.bluetooth_error_no_plugins)
+        upload(Upload.PLUGIN, byteArrayOf(PluginService.BEGIN) + header, module, mtu, progress)
+    }
+
+    override suspend fun sendFirmware(image: ByteArray, signature: ByteArray, progress: (sent: Int) -> Unit) = session {
+        val mtu = requestMtu(MTU)
+        // Shorter connection intervals carry more pieces per second; the Knob keeps up.
+        gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+        upload(Upload.FIRMWARE, FirmwareService.update(image.size, signature), image, mtu, progress)
+    }
+
+    /**
+     * Starts an upload of [kind] with the control write [begin], sends [payload] in pieces that fit [mtu] and
+     * commits it; [progress] hears the bytes sent. The Knob takes it only over an encrypted link.
+     */
+    private suspend fun Session.upload(
+        kind: Upload,
+        begin: ByteArray,
+        payload: ByteArray,
+        mtu: Int,
+        progress: (sent: Int) -> Unit,
+    ) {
+        val service = service(PluginService.SERVICE) ?: throw BluetoothFailed(kind.noService)
         val control = service.characteristic(PluginService.CONTROL)
         val data = service.characteristic(PluginService.DATA)
         val status = service.characteristic(PluginService.STATUS)
-        if (control == null || data == null || status == null) {
-            throw BluetoothFailed(Res.string.bluetooth_error_no_plugins)
-        }
+        if (control == null || data == null || status == null) throw BluetoothFailed(kind.noService)
         subscribe(status)
         bond()
-        if (!write(control, byteArrayOf(PluginService.BEGIN) + header)) {
-            throw BluetoothFailed(Res.string.bluetooth_error_refused_begin)
+        when (writeStatus(control, begin)) {
+            BluetoothGatt.GATT_SUCCESS -> Unit
+
+            // A firmware whose control characteristic is too short for the command.
+            BluetoothGatt.GATT_INVALID_ATTRIBUTE_LENGTH -> throw BluetoothFailed(kind.tooOld)
+
+            else -> throw BluetoothFailed(Res.string.bluetooth_error_refused_begin)
         }
-        awaitStatus(PluginService.READY)
+        awaitStatus(PluginService.READY, kind.failures)
         try {
             // A write carries three bytes of ATT besides the offset and the piece.
             val piece = (mtu - 3 - PluginService.OFFSET).coerceIn(PIECE_MIN, PluginService.PIECE_MAX)
             var offset = 0
-            while (offset < module.size) {
-                if (!write(data, PluginService.pieceAt(module, offset, piece))) {
-                    throw BluetoothFailed(Res.string.bluetooth_error_refused_piece)
+            var count = 0
+            while (offset < payload.size) {
+                val end = minOf(offset + piece, payload.size)
+                // Only every window-th piece and the last wait for the Knob's reply; it answers in order, so that
+                // reply stands for the pieces before it.
+                val type = if (++count % kind.window == 0 || end == payload.size) {
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                } else {
+                    BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
                 }
-                checkStatuses()
-                offset = minOf(offset + piece, module.size)
+                if (!write(data, PluginService.pieceAt(payload, offset, piece), type)) {
+                    throw BluetoothFailed(kind.refusedPiece)
+                }
+                checkStatuses(kind.failures)
+                offset = end
                 progress(offset)
             }
-            if (!write(control, byteArrayOf(PluginService.COMMIT))) {
-                throw BluetoothFailed(Res.string.bluetooth_error_refused_plugin)
-            }
-            awaitStatus(PluginService.WRITTEN)
+            if (!write(control, byteArrayOf(PluginService.COMMIT))) throw BluetoothFailed(kind.refused)
+            awaitStatus(PluginService.WRITTEN, kind.failures)
         } catch (e: BluetoothFailed) {
             withTimeoutOrNull(ABORT_TIMEOUT_MS) { runCatching { write(control, byteArrayOf(PluginService.ABORT)) } }
             throw e
         }
+    }
+
+    /** What sets a plugin upload and a firmware update apart. */
+    private enum class Upload(
+        val window: Int,
+        val failures: (Int) -> StringResource?,
+        val noService: StringResource,
+        val tooOld: StringResource,
+        val refusedPiece: StringResource,
+        val refused: StringResource,
+    ) {
+        PLUGIN(
+            window = 1,
+            failures = PluginService::failure,
+            noService = Res.string.bluetooth_error_no_plugins,
+            tooOld = Res.string.bluetooth_error_refused_begin,
+            refusedPiece = Res.string.bluetooth_error_refused_piece,
+            refused = Res.string.bluetooth_error_refused_plugin,
+        ),
+        FIRMWARE(
+            window = FirmwareService.WINDOW,
+            failures = FirmwareService::failure,
+            noService = Res.string.bluetooth_error_no_firmware,
+            tooOld = Res.string.bluetooth_error_no_firmware,
+            refusedPiece = Res.string.bluetooth_error_refused_firmware_piece,
+            refused = Res.string.bluetooth_error_refused_firmware,
+        ),
     }
 
     override suspend fun plugins(): List<KnobPlugin> = session {
@@ -208,64 +266,12 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
     private suspend fun Session.bond() {
         if (device.bondState == BluetoothDevice.BOND_BONDED) return
         val bonded = try {
-            withTimeout(BOND_TIMEOUT_MS) { awaitBond(device) }
+            withTimeout(BOND_TIMEOUT_MS) { awaitBond(context, device) }
         } catch (_: TimeoutCancellationException) {
             false
         }
         if (!bonded) throw BluetoothFailed(Res.string.bluetooth_error_not_paired)
     }
-
-    /** Starts pairing with [device] and waits until it is bonded (true) or pairing failed (false). */
-    private suspend fun awaitBond(device: BluetoothDevice): Boolean = suspendCancellableCoroutine { continuation ->
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                // Asked of the device rather than read from the extras, which any app could send.
-                when (device.bondState) {
-                    BluetoothDevice.BOND_BONDED -> finish(true)
-                    BluetoothDevice.BOND_NONE -> finish(false)
-                }
-            }
-
-            fun finish(bonded: Boolean) {
-                runCatching { context.unregisterReceiver(this) }
-                if (continuation.isActive) continuation.resume(bonded)
-            }
-        }
-        // A protected system broadcast, which needs no export flag.
-        context.registerReceiver(receiver, IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED))
-        continuation.invokeOnCancellation { runCatching { context.unregisterReceiver(receiver) } }
-        if (!device.createBond() && device.bondState != BluetoothDevice.BOND_BONDING) {
-            receiver.finish(device.bondState == BluetoothDevice.BOND_BONDED)
-        }
-    }
-
-    private suspend fun find(scanner: android.bluetooth.le.BluetoothLeScanner?): BluetoothDevice =
-        suspendCancellableCoroutine { continuation ->
-            if (scanner == null) {
-                continuation.resumeWithException(BluetoothFailed(Res.string.bluetooth_error_off))
-                return@suspendCancellableCoroutine
-            }
-            val found = object : ScanCallback() {
-                override fun onScanResult(callbackType: Int, result: ScanResult) {
-                    runCatching { scanner.stopScan(this) }
-                    if (continuation.isActive) continuation.resume(result.device)
-                }
-
-                override fun onScanFailed(errorCode: Int) {
-                    if (continuation.isActive) {
-                        continuation.resumeWithException(BluetoothFailed(Res.string.bluetooth_error_search, errorCode))
-                    }
-                }
-            }
-            // The name travels in the advertisement, the service in the scan response; either finds it.
-            val filters = listOf(
-                ScanFilter.Builder().setDeviceName(KnobService.NAME).build(),
-                ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(KnobService.SERVICE)).build(),
-            )
-            val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
-            scanner.startScan(filters, settings, found)
-            continuation.invokeOnCancellation { runCatching { scanner.stopScan(found) } }
-        }
 
     /** One connection: the GATT callbacks arrive as [events], the plugin status notifications as [statuses]. */
     private class Session(val device: BluetoothDevice) {
@@ -360,19 +366,28 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
             return expect<Event.Read>().value ?: throw BluetoothFailed(Res.string.bluetooth_error_read)
         }
 
-        /** Writes [value] and waits for the Knob to take it; false when it refuses. */
-        suspend fun write(characteristic: BluetoothGattCharacteristic, value: ByteArray): Boolean =
-            writeStatus(characteristic, value) == BluetoothGatt.GATT_SUCCESS
+        /**
+         * Writes [value] and waits for the Knob to take it; false when it refuses. A write of [type]
+         * `WRITE_TYPE_NO_RESPONSE` is taken once the phone has queued it.
+         */
+        suspend fun write(
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+            type: Int = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+        ): Boolean = writeStatus(characteristic, value, type) == BluetoothGatt.GATT_SUCCESS
 
         /** Writes [value] and waits for the Knob's answer, a `BluetoothGatt` status. */
-        suspend fun writeStatus(characteristic: BluetoothGattCharacteristic, value: ByteArray): Int {
+        suspend fun writeStatus(
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+            type: Int = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+        ): Int {
             val started = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                gatt.writeCharacteristic(characteristic, value, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ==
-                    BluetoothStatusCodes.SUCCESS
+                gatt.writeCharacteristic(characteristic, value, type) == BluetoothStatusCodes.SUCCESS
             } else {
                 @Suppress("DEPRECATION")
                 characteristic.run {
-                    writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                    writeType = type
                     this.value = value
                     gatt.writeCharacteristic(this)
                 }
@@ -410,24 +425,24 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
             }
         }
 
-        /** Waits for the plugin status [code]; a failure on the way ends the upload. */
-        suspend fun awaitStatus(code: Int) {
+        /** Waits for the upload status [code]; a failure on the way, named by [failures], ends the upload. */
+        suspend fun awaitStatus(code: Int, failures: (Int) -> StringResource? = PluginService::failure) {
             while (true) {
                 val status = withTimeoutOrNull(STEP_TIMEOUT_MS) { statuses.receive() }
                     ?: throw BluetoothFailed(Res.string.bluetooth_error_silent)
-                failOn(status)
+                failOn(status, failures)
                 if (status.firstOrNull()?.toInt() == code) return
             }
         }
 
         /** Ends the upload if the Knob has reported a failure meanwhile. */
-        fun checkStatuses() {
-            while (true) failOn(statuses.tryReceive().getOrNull() ?: return)
+        fun checkStatuses(failures: (Int) -> StringResource?) {
+            while (true) failOn(statuses.tryReceive().getOrNull() ?: return, failures)
         }
 
-        private fun failOn(status: ByteArray) {
+        private fun failOn(status: ByteArray, failures: (Int) -> StringResource?) {
             val code = status.firstOrNull()?.toInt()?.and(0xff) ?: return
-            PluginService.failure(code)?.let { throw BluetoothFailed(it) }
+            failures(code)?.let { throw BluetoothFailed(it) }
         }
     }
 
@@ -463,6 +478,62 @@ class AndroidBluetooth(private val context: Context) : Bluetooth {
         const val NOTIFICATIONS = "00002902-0000-1000-8000-00805f9b34fb"
     }
 }
+
+/** Starts pairing with [device] and waits until it is bonded (true) or pairing failed (false). */
+@SuppressLint("MissingPermission")
+private suspend fun awaitBond(context: Context, device: BluetoothDevice): Boolean =
+    suspendCancellableCoroutine { continuation ->
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                // Asked of the device rather than read from the extras, which any app could send.
+                when (device.bondState) {
+                    BluetoothDevice.BOND_BONDED -> finish(true)
+                    BluetoothDevice.BOND_NONE -> finish(false)
+                }
+            }
+
+            fun finish(bonded: Boolean) {
+                runCatching { context.unregisterReceiver(this) }
+                if (continuation.isActive) continuation.resume(bonded)
+            }
+        }
+        // A protected system broadcast, which needs no export flag.
+        context.registerReceiver(receiver, IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED))
+        continuation.invokeOnCancellation { runCatching { context.unregisterReceiver(receiver) } }
+        if (!device.createBond() && device.bondState != BluetoothDevice.BOND_BONDING) {
+            receiver.finish(device.bondState == BluetoothDevice.BOND_BONDED)
+        }
+    }
+
+/** The first Knob that [scanner] sees. */
+@SuppressLint("MissingPermission")
+private suspend fun find(scanner: android.bluetooth.le.BluetoothLeScanner?): BluetoothDevice =
+    suspendCancellableCoroutine { continuation ->
+        if (scanner == null) {
+            continuation.resumeWithException(BluetoothFailed(Res.string.bluetooth_error_off))
+            return@suspendCancellableCoroutine
+        }
+        val found = object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) {
+                runCatching { scanner.stopScan(this) }
+                if (continuation.isActive) continuation.resume(result.device)
+            }
+
+            override fun onScanFailed(errorCode: Int) {
+                if (continuation.isActive) {
+                    continuation.resumeWithException(BluetoothFailed(Res.string.bluetooth_error_search, errorCode))
+                }
+            }
+        }
+        // The name travels in the advertisement, the service in the scan response; either finds it.
+        val filters = listOf(
+            ScanFilter.Builder().setDeviceName(KnobService.NAME).build(),
+            ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(KnobService.SERVICE)).build(),
+        )
+        val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+        scanner.startScan(filters, settings, found)
+        continuation.invokeOnCancellation { runCatching { scanner.stopScan(found) } }
+    }
 
 private fun BluetoothGatt.has(needs: Pair<String, String>): Boolean =
     getService(UUID.fromString(needs.first))?.getCharacteristic(UUID.fromString(needs.second)) != null

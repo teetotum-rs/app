@@ -13,6 +13,13 @@ interface Bluetooth {
      */
     suspend fun sendPlugin(module: ByteArray, header: ByteArray, progress: (sent: Int) -> Unit)
 
+    /**
+     * Sends a firmware [image] with its [signature] to the Knob while its Settings > Receive is open; the Knob
+     * checks the signature, switches to the image and restarts. [progress] hears the image bytes sent. Throws
+     * [BluetoothFailed] when it cannot.
+     */
+    suspend fun sendFirmware(image: ByteArray, signature: ByteArray, progress: (sent: Int) -> Unit)
+
     /** The plugins on the Knob, bundled and in its slots; throws [BluetoothFailed] when it cannot. */
     suspend fun plugins(): List<KnobPlugin>
 
@@ -87,6 +94,9 @@ fun cardText(bytes: Long?): Message = when (bytes) {
         Message.Raw(shown)
     }
 }
+
+/** [sent] of [total] in whole percent, rounded down as the Knob shows it. */
+fun percentOf(sent: Int, total: Int): Int = (sent.toLong() * 100 / total.coerceAtLeast(1)).toInt()
 
 /** A duration in its two largest units, such as `2 d 5 h`, `3 min 12 s` or `45 s`. */
 fun uptimeText(seconds: Long): String {
