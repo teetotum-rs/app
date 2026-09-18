@@ -8,8 +8,8 @@ abstract: >-
 authors:
   - given-names: Stefan
     family-names: Grühn
-version: 0.2.0
-date-released: "2026-09-17"
+version: 0.3.0
+date-released: "2026-09-18"
 license:
   - MIT
   - Apache-2.0
