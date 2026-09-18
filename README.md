@@ -21,6 +21,10 @@ checksum.
 Early. Only Android is built and tested; the code is laid out as Compose Multiplatform, with
 everything that is not Android-specific in `shared`.
 
+The app's shell — menu, pages, settings, Markdown pages, build setup and checks — is also
+available on its own, without anything Knob-specific, as a starting point for other apps:
+[compose-multiplatform-template](https://github.com/stefangruehn/compose-multiplatform-template).
+
 ## Building
 
 JDK 21 or later and the Android SDK (API 37). Point `local.properties` at the SDK
