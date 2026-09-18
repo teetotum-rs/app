@@ -67,7 +67,9 @@ the settings anew, for instance after you changed them on the Knob.
 ## Firmware over Bluetooth
 
 Choose **Firmware over Bluetooth** on **Home** or in the menu, then **Choose file** and pick a signed
-firmware file, `.tfw`. The app shows the firmware's name, version and size. On the Knob, open
+firmware file, `.tfw`. Each firmware release carries one, `teetotum-v<version>.tfw`, at
+[github.com/teetotum-rs/firmware/releases](https://github.com/teetotum-rs/firmware/releases); download
+it to the phone first. The app shows the firmware's name, version and size. On the Knob, open
 **Settings > Receive**, then tap **Send to Knob**. Sending takes a few minutes; the screen stays
 on meanwhile, and the page shows how much is sent and how long it will still take. The Knob writes the
 firmware beside the one it runs, checks the signature, switches and restarts. A transfer that breaks
@@ -79,6 +81,10 @@ off, or a file not signed with the project's key, changes nothing.
 - **Imprint** and **Privacy** say who makes the app and what it does with your data.
 - **Changelog** lists what changed in each version.
 - **Libraries** names the open-source libraries the app is built on, with their licences.
+
+The app's shell — menu, pages, settings, these Markdown pages, build setup and checks — is also
+available on its own, without anything Knob-specific, as a starting point for other apps:
+[compose-multiplatform-template](https://github.com/stefangruehn/compose-multiplatform-template).
 
 ## Settings
 

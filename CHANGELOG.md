@@ -22,6 +22,8 @@ All notable changes to the app are listed here. The format follows
 - A Bluetooth connection that does not come about is tried up to three times before the app says so.
 - Firmware over Bluetooth sends a signed `.tfw` firmware file to the Knob, which checks it, switches to it and restarts; the page shows the firmware's version before sending, and the percent sent, the rate and the time still to go while it sends.
 - Firmware over Bluetooth warns before sending a file the Knob already runs, or an older release than it runs.
+- Help says where to download a signed firmware file: each firmware release carries one.
+- Help points to the app template, the app's shell shared on its own for other apps.
 - Settings choose the start page, Home or the page last open, and whether the plugin catalogue is read from GitHub only on tap, as by default, or as soon as the page opens.
 
 ### Changed
