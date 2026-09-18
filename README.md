@@ -23,7 +23,7 @@ everything that is not Android-specific in `shared`.
 
 ## Building
 
-JDK 17 or later and the Android SDK (API 37). Point `local.properties` at the SDK
+JDK 21 or later and the Android SDK (API 37). Point `local.properties` at the SDK
 (`sdk.dir=...`), then:
 
 ```

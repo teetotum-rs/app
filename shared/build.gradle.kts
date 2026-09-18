@@ -32,7 +32,7 @@ val markdown = tasks.register("generateMarkdown") {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 
     android {
         namespace = "io.github.teetotum_rs.app.shared"

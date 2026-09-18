@@ -14,9 +14,9 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          # 17 compiles (jvmToolchain), 25 runs the Gradle daemon (gradle-daemon-jvm.properties).
+          # 21 compiles (jvmToolchain), 25 runs the Gradle daemon (gradle-daemon-jvm.properties).
           java-version: |
-            17
+            21
             25
       - uses: gradle/actions/setup-gradle@v5
       - name: Lint
