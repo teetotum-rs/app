@@ -6,8 +6,11 @@ All notable changes to the app are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-18
+
 ### Added
 
+- A user manual as a PDF, from unpacking the Knob to updating its firmware, attached to each release as `teetotum-manual-<version>.pdf`.
 - Home, the first page in the menu and the one the app opens on, with a card for each feature.
 - Status over Bluetooth shows the Knob's firmware, its card, how long it has run, how many Wi-Fi networks it sees and when it read them.
 - Help describes how the menu works.
@@ -37,6 +40,8 @@ All notable changes to the app are listed here. The format follows
 
 - In landscape the camera stays square and **Close camera** sits beside it instead of off screen.
 - Turning the phone no longer closes the camera.
+
+The pages over Bluetooth need firmware 0.4.0 or later.
 
 ## [0.2.0] - 2026-09-17
 

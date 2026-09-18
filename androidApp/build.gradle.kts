@@ -13,8 +13,8 @@ android {
         applicationId = "io.github.teetotum_rs.app"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
     }
 
     // Release signing comes from the environment; without it the release APK stays unsigned.
