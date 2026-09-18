@@ -6,6 +6,10 @@ All notable changes to the app are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `SHA256SUMS` on each release lists the manual as well as the APK.
+
 ## [0.3.0] - 2026-09-18
 
 ### Added

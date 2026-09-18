@@ -95,7 +95,14 @@ jobs:
       - name: Attach
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" "teetotum-manual-$TAG.pdf" --clobber
+        # SHA256SUMS comes from the APK job; the manual's line joins it, once.
+        run: |
+          pdf="teetotum-manual-$TAG.pdf"
+          gh release download "$TAG" --pattern SHA256SUMS --clobber
+          grep -v -F -- "  $pdf" SHA256SUMS > sums || true
+          sha256sum -- "$pdf" >> sums
+          mv sums SHA256SUMS
+          gh release upload "$TAG" "$pdf" SHA256SUMS --clobber
 
   citation:
     name: Citation version
