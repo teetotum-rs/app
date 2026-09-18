@@ -1,5 +1,6 @@
 package io.github.teetotum_rs.app
 
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.StringResource
 
 /**
@@ -72,4 +73,35 @@ fun firmwareOf(signed: ByteArray): FirmwareFile {
         return field.copyOf(field.indexOf(0).takeIf { it >= 0 } ?: field.size).decodeToString()
     }
     return FirmwareFile(image, signed.copyOfRange(image.size, signed.size), text(APP_NAME_AT), text(APP_VERSION_AT))
+}
+
+/** How long the Knob takes from the commit to answering again: it restarts after half a second and boots in two. */
+private const val RESTART_WAIT_MS = 3_000L
+
+/** How often the Knob is asked after an update; each ask scans for up to ten seconds. */
+private const val RESTART_TRIES = 4
+
+/**
+ * The Knob's status once it answers from a start after [committedAt], the moment the update was written; null
+ * when it does not within a few tries. A status from before the restart has an uptime longer than that.
+ */
+suspend fun statusAfterRestart(bluetooth: Bluetooth, committedAt: Long, now: () -> Long = ::nowMillis): KnobStatus? {
+    repeat(RESTART_TRIES) {
+        delay(RESTART_WAIT_MS)
+        val status = try {
+            bluetooth.status()
+        } catch (_: BluetoothFailed) {
+            null
+        }
+        if (status != null && status.uptimeSeconds * 1000 < now() - committedAt) return status
+    }
+    return null
+}
+
+/** What an update to [sent], the version in the file, came to, by the [status] the Knob answered with after it. */
+fun updateResult(sent: String, status: KnobStatus?): Message = when {
+    status == null -> messageOf(Res.string.firmware_no_answer)
+    status.version == null -> messageOf(Res.string.firmware_runs_unknown)
+    status.version == sent -> messageOf(Res.string.firmware_runs, sent)
+    else -> messageOf(Res.string.firmware_runs_other, status.version, sent)
 }

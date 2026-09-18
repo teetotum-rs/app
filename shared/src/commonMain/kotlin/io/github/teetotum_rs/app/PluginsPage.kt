@@ -244,6 +244,7 @@ internal fun SendLine(sending: Sending?, progress: String? = null) {
         if (sending.result != null) {
             Text(sending.result.text(), style = MaterialTheme.typography.bodyMedium)
         } else if (sending.total == 0) {
+            if (progress != null) Text(progress, style = MaterialTheme.typography.bodyMedium)
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         } else {
             Text(

@@ -49,7 +49,9 @@ fun FirmwarePage(
                     bluetooth.sendFirmware(firmware.image, firmware.signature) {
                         sending = Sending(it, firmware.image.size)
                     }
-                    messageOf(Res.string.firmware_sent)
+                    val committed = nowMillis()
+                    sending = Sending(0, 0)
+                    updateResult(firmware.version, statusAfterRestart(bluetooth, committed))
                 } catch (e: BluetoothFailed) {
                     e.shown
                 }
@@ -82,7 +84,12 @@ fun FirmwarePage(
                         )
                     }
                 }
-                SendLine(sending, sending?.let { progressText(it, started) })
+                SendLine(
+                    sending,
+                    sending?.let {
+                        if (it.total == 0) stringResource(Res.string.firmware_restarting) else progressText(it, started)
+                    },
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ActionButton(
                         stringResource(Res.string.plugins_choose),

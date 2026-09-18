@@ -254,7 +254,11 @@
     <string name="firmware_file_hint">A firmware image signed with the project's key, as a .tfw file.</string>
     <string name="firmware_facts">%1$s %2$s · %3$s</string>
     <string name="firmware_progress">%1$d % of %2$s · %3$s/s · %4$s left</string>
-    <string name="firmware_sent">Sent. The Knob switches to the new firmware and restarts; Status over Bluetooth shows its version.</string>
+    <string name="firmware_restarting">Sent. The Knob switches to the new firmware and restarts; waiting for it to answer.</string>
+    <string name="firmware_runs">The Knob restarted and runs %1$s.</string>
+    <string name="firmware_runs_other">The Knob restarted but runs %1$s, not %2$s from the file.</string>
+    <string name="firmware_runs_unknown">The Knob restarted; its firmware does not report its version.</string>
+    <string name="firmware_no_answer">Sent, but the Knob did not answer after its restart. Status over Bluetooth shows its version once it does.</string>
     <string name="firmware_error_too_long">Longer than %1$d bytes.</string>
     <string name="firmware_error_not_firmware">Not a firmware image for the Knob.</string>
 
