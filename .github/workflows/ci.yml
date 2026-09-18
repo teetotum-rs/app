@@ -22,5 +22,30 @@ jobs:
       - name: Lint
         run: ./gradlew --console=plain detekt :androidApp:lintDebug
       # The release APK is built unsigned here: it proves R8 still gets through the code.
+      # Verifying runs every host test and fails when a screen no longer matches its picture in the manual.
       - name: Test and build
-        run: ./gradlew --console=plain :shared:testAndroidHostTest :androidApp:assembleDebug :androidApp:assembleRelease
+        run: ./gradlew --console=plain :shared:verifyRoborazziAndroidHostTest :androidApp:assembleDebug :androidApp:assembleRelease
+      - name: Keep the differing screens
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: screenshot-diffs
+          path: shared/build/outputs/roborazzi
+
+  manual:
+    name: User manual
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pandoc/actions/setup@v1
+        with:
+          version: 3.7.0.2
+      - uses: typst-community/setup-typst@v5
+        with:
+          typst-version: 0.15.1
+      - name: Build
+        run: docs/manual/build.sh teetotum-manual.pdf
+      - uses: actions/upload-artifact@v5
+        with:
+          name: manual
+          path: teetotum-manual.pdf

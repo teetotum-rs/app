@@ -75,6 +75,28 @@ jobs:
             gh release create "$TAG" --verify-tag --title "TeeToTum app $TAG" --notes-file "$RUNNER_TEMP/notes.md"
           gh release upload "$TAG" dist/* --clobber
 
+  manual:
+    name: User manual
+    # The release exists once the APK job has published it.
+    needs: apk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+      - uses: pandoc/actions/setup@v1
+        with:
+          version: 3.7.0.2
+      - uses: typst-community/setup-typst@v5
+        with:
+          typst-version: 0.15.1
+      - name: Build
+        run: docs/manual/build.sh "teetotum-manual-$TAG.pdf"
+      - name: Attach
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" "teetotum-manual-$TAG.pdf" --clobber
+
   citation:
     name: Citation version
     # Only a new tag moves the citation; building an older tag again leaves it alone.
