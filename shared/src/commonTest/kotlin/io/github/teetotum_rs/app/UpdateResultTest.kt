@@ -45,4 +45,15 @@ class UpdateResultTest {
         assertEquals(messageOf(Res.string.firmware_runs_unknown), updateResult("v0.3.4 1a2b3c4", status(2, null)))
         assertEquals(messageOf(Res.string.firmware_no_answer), updateResult("v0.3.4 1a2b3c4", null))
     }
+
+    @Test
+    fun warnsBeforeTheSameOrAnOlderRelease() {
+        val running = "v0.4.0 1a2b3c4"
+        assertEquals(messageOf(Res.string.firmware_warn_same, running), sendWarning(running, running))
+        assertEquals(messageOf(Res.string.firmware_warn_older, running), sendWarning("v0.3.9 5d6e7f8", running))
+        assertNull(sendWarning("v0.3.5 5d6e7f8", "v0.3.4 1a2b3c4"))
+        assertNull(sendWarning("v0.3.4 5d6e7f8", "v0.3.4 1a2b3c4"))
+        assertNull(sendWarning("v0.3.3 5d6e7f8", "canary 1a2b3c4"))
+        assertNull(sendWarning("v0.3.3 5d6e7f8", null))
+    }
 }

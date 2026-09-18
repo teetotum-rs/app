@@ -259,6 +259,8 @@
     <string name="firmware_runs_other">The Knob restarted but runs %1$s, not %2$s from the file.</string>
     <string name="firmware_runs_unknown">The Knob restarted; its firmware does not report its version.</string>
     <string name="firmware_no_answer">Sent, but the Knob did not answer after its restart. Status over Bluetooth shows its version once it does.</string>
+    <string name="firmware_warn_same">The Knob already runs %1$s.</string>
+    <string name="firmware_warn_older">Older than %1$s, which the Knob runs. Sending it goes back to this version.</string>
     <string name="firmware_error_too_long">Longer than %1$d bytes.</string>
     <string name="firmware_error_not_firmware">Not a firmware image for the Knob.</string>
 

@@ -1,10 +1,12 @@
 package io.github.teetotum_rs.app
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +23,8 @@ private class PickedFirmware(val name: String, val firmware: FirmwareFile?, val 
 
 /**
  * Sends a signed firmware file, picked with [picker], to the Knob over [bluetooth]; [access] asks for Bluetooth
- * first. The screen stays on while it sends.
+ * first. The screen stays on while it sends. It warns before sending a file the Knob already runs or one older
+ * than it.
  */
 @Composable
 fun FirmwarePage(
@@ -34,11 +37,21 @@ fun FirmwarePage(
         var picked by remember { mutableStateOf<PickedFirmware?>(null) }
         var sending by remember { mutableStateOf<Sending?>(null) }
         var started by remember { mutableLongStateOf(0L) }
+        var running by remember { mutableStateOf<String?>(null) }
         val busy = sending.let { it != null && it.result == null }
 
         val pick = picker { picks ->
             picked = picks.firstOrNull()?.let(::pickedFirmwareOf) ?: return@picker
             sending = null
+        }
+
+        LaunchedEffect(picked) {
+            if (picked?.firmware == null) return@LaunchedEffect
+            running = try {
+                bluetooth.status().version
+            } catch (_: BluetoothFailed) {
+                null
+            }
         }
 
         fun send(firmware: FirmwareFile) {
@@ -63,27 +76,8 @@ fun FirmwarePage(
         CardColumn {
             Text(stringResource(Res.string.firmware_intro), style = MaterialTheme.typography.bodyLarge)
             PageCard(Res.drawable.memory, stringResource(Res.string.firmware_file)) {
-                val current = picked
-                val firmware = current?.firmware
-                when {
-                    current == null -> PluginLine(stringResource(Res.string.firmware_file_hint))
-
-                    firmware == null -> PluginLine(
-                        stringResource(Res.string.common_name_value, current.name, current.problem?.text().orEmpty()),
-                    )
-
-                    else -> {
-                        Text(current.name, style = MaterialTheme.typography.titleSmall)
-                        PluginLine(
-                            stringResource(
-                                Res.string.firmware_facts,
-                                firmware.name,
-                                firmware.version,
-                                sizeText(firmware.image.size.toLong()),
-                            ),
-                        )
-                    }
-                }
+                val firmware = picked?.firmware
+                PickedLines(picked, running.takeIf { sending == null })
                 SendLine(
                     sending,
                     sending?.let {
@@ -106,6 +100,32 @@ fun FirmwarePage(
                     }
                 }
             }
+        }
+    }
+}
+
+/** What the [picked] file says about itself, and a warning when the Knob already runs [running] or newer. */
+@Composable
+private fun PickedLines(picked: PickedFirmware?, running: String?) {
+    val firmware = picked?.firmware
+    when {
+        picked == null -> PluginLine(stringResource(Res.string.firmware_file_hint))
+
+        firmware == null -> PluginLine(
+            stringResource(Res.string.common_name_value, picked.name, picked.problem?.text().orEmpty()),
+        )
+
+        else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(picked.name, style = MaterialTheme.typography.titleSmall)
+            PluginLine(
+                stringResource(
+                    Res.string.firmware_facts,
+                    firmware.name,
+                    firmware.version,
+                    sizeText(firmware.image.size.toLong()),
+                ),
+            )
+            sendWarning(firmware.version, running)?.let { Text(it.text(), color = MaterialTheme.colorScheme.error) }
         }
     }
 }

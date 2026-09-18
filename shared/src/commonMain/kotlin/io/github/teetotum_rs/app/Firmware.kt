@@ -105,3 +105,15 @@ fun updateResult(sent: String, status: KnobStatus?): Message = when {
     status.version == sent -> messageOf(Res.string.firmware_runs, sent)
     else -> messageOf(Res.string.firmware_runs_other, status.version, sent)
 }
+
+/**
+ * A warning before sending [file], the version in the picked file, to a Knob that runs [running]; null when the file
+ * is newer, or either version is unknown or a development build. Builds of one release are not told apart.
+ */
+fun sendWarning(file: String, running: String?): Message? {
+    if (running == null) return null
+    if (file == running) return messageOf(Res.string.firmware_warn_same, running)
+    val from = FirmwareVersion.parse(running) ?: return null
+    val to = FirmwareVersion.parse(file) ?: return null
+    return if (to < from) messageOf(Res.string.firmware_warn_older, running) else null
+}
