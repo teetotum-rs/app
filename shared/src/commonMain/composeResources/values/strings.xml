@@ -131,7 +131,7 @@
     <string name="settings_theme_github">GitHub</string>
     <string name="settings_theme_github_detail">GitHub Light or Dark Default, as the phone is set</string>
     <string name="settings_theme_red">Red</string>
-    <string name="settings_theme_red_detail">The knob's red theme, light or dark as the phone is set</string>
+    <string name="settings_theme_red_detail">The Knob's red theme, light or dark as the phone is set</string>
 
     <!-- Status over Bluetooth -->
     <string name="knob_settings_hint">A change shows on the Knob at once and stays after a restart. The first one asks to pair the phone.</string>
@@ -158,8 +158,8 @@
     <string name="status_networks">Wi-Fi networks nearby</string>
     <string name="status_read_at">Read at</string>
     <string name="status_read_again">Read again</string>
-    <string name="status_firmware_unknown">Older than 0.3.4, the first firmware to report its version here.</string>
-    <string name="status_card_unknown">Needs firmware 0.3.4 or later.</string>
+    <string name="status_firmware_unknown">Older than 0.4.0, the first firmware to report its version here.</string>
+    <string name="status_card_unknown">Needs firmware 0.4.0 or later.</string>
     <string name="status_no_card">No card in the Knob.</string>
 
     <!-- Bluetooth: access and failures -->

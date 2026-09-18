@@ -38,7 +38,7 @@ private const val OWN = "own"
 /**
  * The plugins on the Knob over [bluetooth], to delete, and plugins to send to it: those in the
  * catalogue, and one picked with [picker]; [access] asks for Bluetooth first. [load] says whether
- * the catalogue is read on opening or on tap.
+ * the catalogue is read on opening or on tap; [http] makes the client that reads it.
  */
 @Composable
 fun PluginsPage(
@@ -46,9 +46,10 @@ fun PluginsPage(
     access: @Composable (content: @Composable () -> Unit) -> Unit,
     picker: @Composable (onPick: (List<Pick>) -> Unit) -> () -> Unit,
     load: CatalogueLoad,
+    http: () -> HttpClient = ::httpClient,
 ) {
     access {
-        val client = remember { httpClient() }
+        val client = remember { http() }
         val scope = rememberCoroutineScope()
         // 0 until the catalogue is asked for.
         var attempt by remember { mutableIntStateOf(if (load == CatalogueLoad.Open) 1 else 0) }

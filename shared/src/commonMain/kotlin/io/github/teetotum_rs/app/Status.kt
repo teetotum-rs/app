@@ -9,23 +9,29 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import org.jetbrains.compose.resources.stringResource
 
 /**
  * The Knob's status over [bluetooth], read when the page opens and again on request, with the phone's time
- * of the read, since the Knob has no clock; [access] asks for Bluetooth first.
+ * of the read from [now], since the Knob has no clock; [access] asks for Bluetooth first.
  */
 @Composable
-fun StatusPage(bluetooth: Bluetooth, access: @Composable (content: @Composable () -> Unit) -> Unit) {
+fun StatusPage(
+    bluetooth: Bluetooth,
+    access: @Composable (content: @Composable () -> Unit) -> Unit,
+    now: () -> Long = ::nowMillis,
+) {
     access {
         var attempt by remember { mutableIntStateOf(0) }
         var result by remember { mutableStateOf<Result<KnobStatus>?>(null) }
         var readAt by remember { mutableLongStateOf(0L) }
+        val clock by rememberUpdatedState(now)
         LaunchedEffect(attempt) {
             result = null
             result = try {
-                Result.success(bluetooth.status()).also { readAt = nowMillis() }
+                Result.success(bluetooth.status()).also { readAt = clock() }
             } catch (e: BluetoothFailed) {
                 Result.failure(e)
             }

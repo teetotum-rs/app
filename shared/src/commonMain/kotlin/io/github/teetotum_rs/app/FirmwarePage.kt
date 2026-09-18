@@ -23,14 +23,15 @@ private class PickedFirmware(val name: String, val firmware: FirmwareFile?, val 
 
 /**
  * Sends a signed firmware file, picked with [picker], to the Knob over [bluetooth]; [access] asks for Bluetooth
- * first. The screen stays on while it sends. It warns before sending a file the Knob already runs or one older
- * than it.
+ * first; [now] times the transfer. The screen stays on while it sends. It warns before sending a file the Knob
+ * already runs or one older than it.
  */
 @Composable
 fun FirmwarePage(
     bluetooth: Bluetooth,
     access: @Composable (content: @Composable () -> Unit) -> Unit,
     picker: @Composable (onPick: (List<Pick>) -> Unit) -> () -> Unit,
+    now: () -> Long = ::nowMillis,
 ) {
     access {
         val scope = rememberCoroutineScope()
@@ -56,15 +57,15 @@ fun FirmwarePage(
 
         fun send(firmware: FirmwareFile) {
             scope.launch {
-                started = nowMillis()
+                started = now()
                 sending = Sending(0, firmware.image.size)
                 val result = try {
                     bluetooth.sendFirmware(firmware.image, firmware.signature) {
                         sending = Sending(it, firmware.image.size)
                     }
-                    val committed = nowMillis()
+                    val committed = now()
                     sending = Sending(0, 0)
-                    updateResult(firmware.version, statusAfterRestart(bluetooth, committed))
+                    updateResult(firmware.version, statusAfterRestart(bluetooth, committed, now))
                 } catch (e: BluetoothFailed) {
                     e.shown
                 }
@@ -81,7 +82,11 @@ fun FirmwarePage(
                 SendLine(
                     sending,
                     sending?.let {
-                        if (it.total == 0) stringResource(Res.string.firmware_restarting) else progressText(it, started)
+                        if (it.total == 0) {
+                            stringResource(Res.string.firmware_restarting)
+                        } else {
+                            progressText(it, started, now())
+                        }
                     },
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -132,8 +137,8 @@ private fun PickedLines(picked: PickedFirmware?, running: String?) {
 
 /** Percent sent of the size, the rate and the time still to go, once a few seconds give a rate worth showing. */
 @Composable
-private fun progressText(sending: Sending, started: Long): String? {
-    val seconds = (nowMillis() - started) / 1000.0
+private fun progressText(sending: Sending, started: Long, now: Long): String? {
+    val seconds = (now - started) / 1000.0
     if (sending.result != null || sending.sent == 0 || seconds < RATE_AFTER_S) return null
     val rate = sending.sent / seconds
     return stringResource(

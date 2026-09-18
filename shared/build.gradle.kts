@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.roborazzi)
 }
 
 // The Markdown pages, compiled in as strings named after their files: src/commonMain/markdown/help.md
@@ -71,6 +72,10 @@ kotlin {
             implementation(libs.compose.ui.test)
             implementation(libs.androidx.compose.ui.test.manifest)
             implementation(libs.robolectric)
+            implementation(libs.roborazzi)
+            implementation(libs.roborazzi.compose)
+            implementation(libs.roborazzi.rule)
+            implementation(libs.ktor.client.mock)
         }
     }
 }

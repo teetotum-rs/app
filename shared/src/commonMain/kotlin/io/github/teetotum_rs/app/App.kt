@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.ktor.client.HttpClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
@@ -82,7 +83,8 @@ private data class Transfer(
  * A [code] given skips the scan. [shared] holds files another app shared, offered for the folder
  * the user opens until sent or declined, which [onShareEnd] reports. [onExit] closes the app from
  * the menu; [libraries] reads the list of libraries it shows. [preferences] are the settings, [onPreferences]
- * takes a change, including the page left for [Start.Last].
+ * takes a change, including the page left for [Start.Last]. [http] makes the client for the card and the catalogue;
+ * [now] is the phone's time in milliseconds.
  */
 @Suppress(
     // The root holds the navigation and the card's actions, and shows any failure of those to the user.
@@ -107,9 +109,11 @@ fun App(
     libraries: suspend () -> String = { "{}" },
     preferences: Preferences = Preferences(),
     onPreferences: (Preferences) -> Unit = {},
+    http: () -> HttpClient = ::httpClient,
+    now: () -> Long = ::nowMillis,
     scanner: @Composable (onCode: (JoinCode) -> Unit) -> Unit,
 ) {
-    val client = remember { CardClient(httpClient()) }
+    val client = remember { CardClient(http()) }
     val scope = rememberCoroutineScope()
     var stage by remember { mutableStateOf<Stage>(code?.let { Stage.Joining(it) } ?: Stage.Scan()) }
     var loading by remember { mutableStateOf(false) }
@@ -266,13 +270,13 @@ fun App(
                             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                     ) {
                         if (page == Page.Status) {
-                            StatusPage(bluetooth, bluetoothAccess)
+                            StatusPage(bluetooth, bluetoothAccess, now)
                         } else if (page == Page.KnobSettings) {
                             KnobSettingsPage(bluetooth, bluetoothAccess)
                         } else if (page == Page.Plugins) {
-                            PluginsPage(bluetooth, bluetoothAccess, picker, preferences.catalogue)
+                            PluginsPage(bluetooth, bluetoothAccess, picker, preferences.catalogue, http)
                         } else if (page == Page.Firmware) {
-                            FirmwarePage(bluetooth, bluetoothAccess, picker)
+                            FirmwarePage(bluetooth, bluetoothAccess, picker, now)
                         } else if (page != Page.Card) {
                             PageContent(
                                 page,
