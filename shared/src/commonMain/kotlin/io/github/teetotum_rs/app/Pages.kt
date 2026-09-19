@@ -24,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -119,10 +118,17 @@ fun TopBar(title: String, onMenu: () -> Unit, onSettings: () -> Unit) {
     }
 }
 
-/** The menu that slides in from the left. */
+/** The menu that slides in from the left; [folded] are the groups folded away, [onFold] takes a change of them. */
 @Composable
-fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) -> Unit, onExit: () -> Unit) {
-    var folded by rememberSaveable { mutableStateOf(emptyList<Page>()) }
+fun Menu(
+    drawer: DrawerState,
+    page: Page,
+    folded: Set<Page>,
+    onFold: (Set<Page>) -> Unit,
+    onClose: () -> Unit,
+    onPage: (Page) -> Unit,
+    onExit: () -> Unit,
+) {
     // Narrower than Material's 360 dp, so the page stays in sight on a phone of that width.
     ModalDrawerSheet(drawerState = drawer, modifier = Modifier.width(300.dp)) {
         Row(modifier = Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -135,7 +141,8 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
             }
             Text(stringResource(Res.string.app_name), style = MaterialTheme.typography.titleLarge)
         }
-        Column(modifier = Modifier.padding(12.dp)) {
+        // The heading stays; the entries scroll, so Exit is in reach on a short screen with every group open.
+        Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
             for (entry in Page.entries) {
                 val grouped = entry in GROUPED
                 if (grouped && entry.parent in folded) continue
@@ -152,7 +159,7 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
                             val open = entry !in folded
                             // Pulled into the item's end padding, so the arrow sits at the end of the entry.
                             IconButton(
-                                onClick = { folded = if (open) folded + entry else folded - entry },
+                                onClick = { onFold(if (open) folded + entry else folded - entry) },
                                 modifier = Modifier.offset(x = 20.dp),
                             ) {
                                 AppIcon(
@@ -184,7 +191,7 @@ fun Menu(drawer: DrawerState, page: Page, onClose: () -> Unit, onPage: (Page) ->
 /**
  * A page from the menu other than [Page.Card]; [libraries] reads the list for [Page.Libraries],
  * [preferences] and [onPreferences] are the settings shown on [Page.Settings], [onPage] opens a page
- * from a group's cards.
+ * from a group's cards, and [scroll] keeps where the page was left.
  */
 @OptIn(ExperimentalMaterial3Api::class) // LibrariesContainer's overload with its own dialog state
 @Composable
@@ -194,12 +201,13 @@ fun PageContent(
     preferences: Preferences,
     onPreferences: (Preferences) -> Unit,
     onPage: (Page) -> Unit,
+    scroll: PageScroll? = null,
 ) {
     val cards = GROUPS[page]
     if (cards != null) {
-        CardsPage(cards, onPage)
+        CardsPage(cards, onPage, scroll)
     } else if (page == Page.Settings) {
-        SettingsPage(preferences, onPreferences)
+        SettingsPage(preferences, onPreferences, scroll)
     } else if (page == Page.Libraries) {
         val listed by produceLibraries { libraries() }
         var dialog by remember { mutableStateOf<Library?>(null) }
@@ -211,6 +219,7 @@ fun PageContent(
             onDialogLibraryChange = { dialog = it },
             onSheetLibraryChange = { sheet = it },
             modifier = Modifier.fillMaxSize(),
+            lazyListState = pageListState(scroll),
             // The library's small defaults, raised to the sizes the other pages use.
             variantTextStyles = LibraryDefaults.m3VariantTextStyles(
                 nameTextStyle = MaterialTheme.typography.titleMedium,
@@ -227,14 +236,14 @@ fun PageContent(
             },
         )
     } else {
-        MarkdownPage(page)
+        MarkdownPage(page, scroll)
     }
 }
 
 /** A group's page: a card for each page under it, which [onPage] opens. */
 @Composable
-private fun CardsPage(cards: List<Pair<Page, StringResource>>, onPage: (Page) -> Unit) {
-    CardColumn {
+private fun CardsPage(cards: List<Pair<Page, StringResource>>, onPage: (Page) -> Unit, scroll: PageScroll?) {
+    CardColumn(scroll) {
         for ((card, detail) in cards) {
             PageCard(card.icon, stringResource(card.title), onClick = { onPage(card) }) {
                 Text(
@@ -249,9 +258,9 @@ private fun CardsPage(cards: List<Pair<Page, StringResource>>, onPage: (Page) ->
 
 /** A page written in Markdown: the text before its first `## ` heading, then a card for each such section. */
 @Composable
-private fun MarkdownPage(page: Page) {
+private fun MarkdownPage(page: Page, scroll: PageScroll?) {
     val (intro, sections) = sectionsOf(textOf(page))
-    CardColumn {
+    CardColumn(scroll) {
         if (intro.isNotBlank()) PageMarkdown(intro)
         for ((title, body) in sections) {
             PageCard(iconOf(page, title), title) { PageMarkdown(body) }
@@ -259,10 +268,11 @@ private fun MarkdownPage(page: Page) {
     }
 }
 
+/** A page of cards that scrolls as one, back where [scroll] was left. */
 @Composable
-internal fun CardColumn(content: @Composable () -> Unit) {
+internal fun CardColumn(scroll: PageScroll?, content: @Composable () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxSize().verticalScroll(pageScrollState(scroll)),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) { content() }
 }

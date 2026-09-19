@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
@@ -53,12 +52,17 @@ enum class CatalogueLoad(override val title: StringResource, override val detail
     Open(Res.string.settings_catalogue_open, Res.string.settings_catalogue_open_detail),
 }
 
-/** Everything the user sets, kept between runs; [lastPage] is where [Start.Last] opens. */
+/**
+ * Everything the user sets, kept between runs; [lastPage] is where [Start.Last] opens, [folded] the menu's groups
+ * folded away, [scroll] where each page was left.
+ */
 data class Preferences(
     val theme: Theme = Theme.System,
     val start: Start = Start.Home,
     val catalogue: CatalogueLoad = CatalogueLoad.Tap,
     val lastPage: Page = Page.Home,
+    val folded: Set<Page> = emptySet(),
+    val scroll: Map<Page, Position> = emptyMap(),
 )
 
 /** GitHub Light Default, from Primer's github-light-default. */
@@ -201,11 +205,11 @@ fun colorSchemeOf(theme: Theme): ColorScheme = when (theme) {
     Theme.Red -> if (isSystemInDarkTheme()) RedDark else RedLight
 }
 
-/** Settings, grouped in cards. */
+/** Settings, grouped in cards; [scroll] keeps where the page was left. */
 @Composable
-fun SettingsPage(preferences: Preferences, onPreferences: (Preferences) -> Unit) {
+fun SettingsPage(preferences: Preferences, onPreferences: (Preferences) -> Unit, scroll: PageScroll? = null) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxSize().verticalScroll(pageScrollState(scroll)),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         SettingsCard(stringResource(Res.string.settings_general), Res.drawable.tune) {

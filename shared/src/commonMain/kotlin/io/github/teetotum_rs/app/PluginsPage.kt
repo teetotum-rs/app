@@ -47,6 +47,7 @@ fun PluginsPage(
     picker: @Composable (onPick: (List<Pick>) -> Unit) -> () -> Unit,
     load: CatalogueLoad,
     http: () -> HttpClient = ::httpClient,
+    scroll: PageScroll? = null,
 ) {
     access {
         val client = remember { http() }
@@ -81,7 +82,7 @@ fun PluginsPage(
             if (sending?.first == OWN) sending = null
         }
 
-        CardColumn {
+        CardColumn(scroll) {
             Text(stringResource(Res.string.plugins_intro), style = MaterialTheme.typography.bodyLarge)
             KnobPluginsCard(knob, busy)
             if (attempt == 0) {

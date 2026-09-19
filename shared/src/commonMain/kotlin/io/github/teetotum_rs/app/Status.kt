@@ -22,6 +22,7 @@ fun StatusPage(
     bluetooth: Bluetooth,
     access: @Composable (content: @Composable () -> Unit) -> Unit,
     now: () -> Long = ::nowMillis,
+    scroll: PageScroll? = null,
 ) {
     access {
         var attempt by remember { mutableIntStateOf(0) }
@@ -45,14 +46,14 @@ fun StatusPage(
                 stringResource(Res.string.common_try_again),
             ) { attempt++ }
 
-            else -> StatusCards(current.getOrThrow(), readAt) { attempt++ }
+            else -> StatusCards(current.getOrThrow(), readAt, scroll) { attempt++ }
         }
     }
 }
 
 @Composable
-private fun StatusCards(status: KnobStatus, readAt: Long, onRead: () -> Unit) {
-    CardColumn {
+private fun StatusCards(status: KnobStatus, readAt: Long, scroll: PageScroll?, onRead: () -> Unit) {
+    CardColumn(scroll) {
         PageCard(Res.drawable.new_releases, stringResource(Res.string.status_firmware)) {
             StatusValue(firmwareText(status.version).text())
         }

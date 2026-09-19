@@ -78,7 +78,11 @@ data class KnobSettings(val theme: Int, val brightness: Int, val haptics: Int, v
  * A change is written at once and shows on the Knob; [access] asks for Bluetooth first.
  */
 @Composable
-fun KnobSettingsPage(bluetooth: Bluetooth, access: @Composable (content: @Composable () -> Unit) -> Unit) {
+fun KnobSettingsPage(
+    bluetooth: Bluetooth,
+    access: @Composable (content: @Composable () -> Unit) -> Unit,
+    scroll: PageScroll? = null,
+) {
     access {
         var attempt by remember { mutableIntStateOf(0) }
         var result by remember { mutableStateOf<Result<KnobSettings>?>(null) }
@@ -99,13 +103,13 @@ fun KnobSettingsPage(bluetooth: Bluetooth, access: @Composable (content: @Compos
                 stringResource(Res.string.common_try_again),
             ) { attempt++ }
 
-            else -> KnobSettingsCards(bluetooth, current.getOrThrow()) { attempt++ }
+            else -> KnobSettingsCards(bluetooth, current.getOrThrow(), scroll) { attempt++ }
         }
     }
 }
 
 @Composable
-private fun KnobSettingsCards(bluetooth: Bluetooth, read: KnobSettings, onRead: () -> Unit) {
+private fun KnobSettingsCards(bluetooth: Bluetooth, read: KnobSettings, scroll: PageScroll?, onRead: () -> Unit) {
     val scope = rememberCoroutineScope()
     // What the Knob holds as far as the app knows, and the write under way.
     var settings by remember(read) { mutableStateOf(read) }
@@ -129,7 +133,7 @@ private fun KnobSettingsCards(bluetooth: Bluetooth, read: KnobSettings, onRead: 
             }
         }
     }
-    CardColumn {
+    CardColumn(scroll) {
         Text(stringResource(Res.string.knob_settings_hint), style = MaterialTheme.typography.bodyMedium)
         if (writing) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         failure?.let { Text(it.text(), color = MaterialTheme.colorScheme.error) }

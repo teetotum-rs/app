@@ -237,6 +237,7 @@ fun App(
     LaunchedEffect(page) {
         if (page != Page.Settings && page != latest.lastPage) keep(latest.copy(lastPage = page))
     }
+    val scroll = rememberPageScroll(page, preferences, onPreferences)
 
     MaterialTheme(colorScheme = colorSchemeOf(preferences.theme)) {
         ModalNavigationDrawer(
@@ -247,6 +248,8 @@ fun App(
                 Menu(
                     drawer,
                     page,
+                    preferences.folded,
+                    onFold = { keep(latest.copy(folded = it)) },
                     onClose = { scope.launch { drawer.close() } },
                     onPage = {
                         page = it
@@ -270,13 +273,13 @@ fun App(
                             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                     ) {
                         if (page == Page.Status) {
-                            StatusPage(bluetooth, bluetoothAccess, now)
+                            StatusPage(bluetooth, bluetoothAccess, now, scroll)
                         } else if (page == Page.KnobSettings) {
-                            KnobSettingsPage(bluetooth, bluetoothAccess)
+                            KnobSettingsPage(bluetooth, bluetoothAccess, scroll)
                         } else if (page == Page.Plugins) {
-                            PluginsPage(bluetooth, bluetoothAccess, picker, preferences.catalogue, http)
+                            PluginsPage(bluetooth, bluetoothAccess, picker, preferences.catalogue, http, scroll)
                         } else if (page == Page.Firmware) {
-                            FirmwarePage(bluetooth, bluetoothAccess, picker, now)
+                            FirmwarePage(bluetooth, bluetoothAccess, picker, now, scroll)
                         } else if (page != Page.Card) {
                             PageContent(
                                 page,
@@ -284,6 +287,7 @@ fun App(
                                 preferences,
                                 onPreferences,
                                 onPage = { page = it },
+                                scroll = scroll,
                             )
                         } else {
                             when (val current = stage) {
@@ -345,7 +349,9 @@ fun App(
                                     }
                                 }
 
-                                is Stage.Failed -> Failed(current.message.text()) { stage = Stage.Scan(camera = true) }
+                                is Stage.Failed -> Failed(
+                                    current.message.text(),
+                                ) { stage = Stage.Scan(camera = true) }
                             }
                         }
                     }

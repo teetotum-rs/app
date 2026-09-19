@@ -32,6 +32,7 @@ fun FirmwarePage(
     access: @Composable (content: @Composable () -> Unit) -> Unit,
     picker: @Composable (onPick: (List<Pick>) -> Unit) -> () -> Unit,
     now: () -> Long = ::nowMillis,
+    scroll: PageScroll? = null,
 ) {
     access {
         val scope = rememberCoroutineScope()
@@ -74,7 +75,7 @@ fun FirmwarePage(
         }
 
         if (busy) KeepScreenOn()
-        CardColumn {
+        CardColumn(scroll) {
             Text(stringResource(Res.string.firmware_intro), style = MaterialTheme.typography.bodyLarge)
             PageCard(Res.drawable.memory, stringResource(Res.string.firmware_file)) {
                 val firmware = picked?.firmware

@@ -32,6 +32,14 @@ class MainActivity : ComponentActivity() {
                 )
             } ?: CatalogueLoad.Tap,
             lastPage = Page.entries.find { it.name == settings.getString(LAST_PAGE, null) } ?: Page.Home,
+            folded = settings.getStringSet(FOLDED, null).orEmpty()
+                .mapNotNull { name -> Page.entries.find { it.name == name } }
+                .toSet(),
+            scroll = buildMap {
+                for (page in Page.entries) {
+                    Position.parse(settings.getString(SCROLL + page.name, null) ?: continue)?.let { put(page, it) }
+                }
+            },
         )
         edgeToEdge()
         super.onCreate(savedInstanceState)
@@ -60,6 +68,8 @@ class MainActivity : ComponentActivity() {
                         putString(START, it.start.name)
                         putString(CATALOGUE, it.catalogue.name)
                         putString(LAST_PAGE, it.lastPage.name)
+                        putStringSet(FOLDED, it.folded.map { page -> page.name }.toSet())
+                        for ((page, position) in it.scroll) putString(SCROLL + page.name, position.toString())
                     }
                 },
             ) { onCode -> Scanner(onCode) }
@@ -105,5 +115,9 @@ class MainActivity : ComponentActivity() {
         const val START = "start"
         const val CATALOGUE = "catalogue"
         const val LAST_PAGE = "last_page"
+        const val FOLDED = "folded"
+
+        /** Followed by the page's name, one key per page. */
+        const val SCROLL = "scroll_"
     }
 }

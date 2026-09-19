@@ -6,7 +6,13 @@ All notable changes to the app are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The menu keeps its folded groups between runs, and every page but the card opens where it was left, also after a restart.
+
 ### Changed
+
+- The menu scrolls, so Exit is in reach on a short screen without folding a group away.
 
 - `SHA256SUMS` on each release lists the manual as well as the APK.
 
